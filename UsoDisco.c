@@ -17,9 +17,8 @@ void entrada_invalida(){
 
 void main(int argc, char const *argv[]){
 	
-	int n_procesos, i,fd[2];    /*entero  	n_procesos: numero de procesos que realizaran el trabajo
+	int n_procesos, i;    		/*entero	n_procesos: numero de procesos que realizaran el trabajo
 											i:  		iterador
-											fd: declaracion de pipe
 								*/
 	pid_t   trabajadores;		// id de los procesos trabajadores		
 	char* nombre_entrada;		// apuntador a la ruta que se obtiene por input
@@ -30,10 +29,11 @@ void main(int argc, char const *argv[]){
 	struct dirent *archivo;		// estructura para el manejo de archivos
 	size_t t = 1;				// iterador para recorrer los directorios
 	FILE *salida;				// apuntador al archivo que obtendra la salida del programa
-	
+	typedef struct arregloPipes
 	{
-		
-	};
+	  int fd[2];
+	} ARREGLO;
+
 	n_procesos = 1;				// si no se ingresa el numero de procesos, por defecto es 1 
 
 
@@ -164,7 +164,15 @@ void main(int argc, char const *argv[]){
 	}
 
 
-	pipe(fd);
+	// Arreglo de pipes de acuerdo al numero de procesos
+	struct arregloPipes* arreglo_pipes;
+	arreglo_pipes = (struct arregloPipes*) malloc(sizeof(struct arregloPipes*) * n_procesos);
+
+	// Crea tantos pipes como trabajadores haya
+	for (i=0;i<n_procesos;i++){
+		pipe(arreglo_pipes.fd);
+	}
+
         
         if((trabajadores = fork()) == -1)
         {
