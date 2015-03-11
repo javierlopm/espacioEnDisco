@@ -19,7 +19,7 @@ void entrada_invalida(){
 
 void trabajar(){
 	while(1){
-		//pause()
+		//USAR SIGSUSPEND
 		//leer de pipe
 
 		//trabajar directorio
@@ -40,7 +40,7 @@ void main(int argc, char const *argv[]){
 	int i;						//Variable auxiliar de iterador
 	int *trabLibres;			//Arreglo booleano de 
 	int *pidTrabajadores;		//Arreglo con pid de trabajadores
-	int stat;					//Variable auxiliar para status de procesos
+	int status;					//Variable auxiliar para status de procesos
 								
 	pid_t   trabajadores;		// id de los procesos trabajadores		
 	char* nombre_entrada;		// apuntador a la ruta que se obtiene por input
@@ -319,8 +319,7 @@ void main(int argc, char const *argv[]){
     else trabajar(); 
 
     /*Luego de finalizar los trabajos, finalizamos a cada hijo*/
-    for (i = 0; i < n_procesos; i++)
-    {
+    for (i = 0; i < n_procesos; i++){
     	status = kill(pidTrabajadores[i],SIGKILL);
     	if(status == -1){
     		perror("Error eliminando proc: ");
