@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include <errno.h>
+#include <signal.h> 
 #include "colaDirectorios.h"
 
 void entrada_invalida(){
@@ -35,9 +36,11 @@ void trabajar(){
 
 void main(int argc, char const *argv[]){
 	
-	int n_procesos;    			//n_procesos: numero de procesos que realizaran el trabajo
-	int i;						//i         : iterador
-	int *trabLibre;				//Arreglo booleano de 
+	int n_procesos;    			//numero de procesos que realizaran el trabajo
+	int i;						//Variable auxiliar de iterador
+	int *trabLibres;			//Arreglo booleano de 
+	int *pidTrabajadores;		//Arreglo con pid de trabajadores
+	int stat;					//Variable auxiliar para status de procesos
 								
 	pid_t   trabajadores;		// id de los procesos trabajadores		
 	char* nombre_entrada;		// apuntador a la ruta que se obtiene por input
@@ -56,7 +59,6 @@ void main(int argc, char const *argv[]){
 	struct stat fileStat;       // para obtener la info de los archivos
 
 	n_procesos = 1;				// si no se ingresa el numero de procesos, por defecto es 1 
-
 
 	// Numero de argumentos invalido
 	if (argc < 2 | argc == 3 | argc == 5 | argc > 6) entrada_invalida();	
@@ -102,9 +104,7 @@ void main(int argc, char const *argv[]){
 		// Si los comandos ejecutados son distintos a -h o salida
 		
 
-		else
-
-			entrada_invalida();
+		else entrada_invalida();
 
 	}
 	if (argc == 4){
@@ -243,7 +243,14 @@ void main(int argc, char const *argv[]){
 	// Arreglo de pipes de acuerdo al numero de procesos
 	//struct arregloPipes* arreglo_pipes;
 	//arreglo_pipes = (struct arregloPipes*) malloc(sizeof(struct arregloPipes*) * n_procesos);
+	
+	/*Inicializacion de arreglo booleano de trabajadores libres*/
+	trabLibres 		= (int *) malloc(sizeof(int) * n_procesos);
+	for (i = 0; i < n_procesos; i++) trabLibres[i] = 1;
 
+	/*Init de pid de trabajadores*/
+	pidTrabajadores = (int *) malloc(sizeof(int) * n_procesos);
+	
 
 	// Creamos tantos pipes y procesos como indique el nivel de concurrencia
 	for (i=0;i<n_procesos;i++){
@@ -251,12 +258,11 @@ void main(int argc, char const *argv[]){
         
         if((trabajadores = fork()) == -1)
         {
-            perror("fork");
+            perror("fork error");
             exit(1);
         }
 
-        if(trabajadores == 0)
-        {	
+        if(trabajadores == 0){	
         	/*INICIALIZACION DE CHILD*/
             /* Child process closes up input side of pipe */
             close(fd[0]);
@@ -273,8 +279,10 @@ void main(int argc, char const *argv[]){
             //Set libre a true
             break;
         }
-        else
-        {
+        else{
+        	/*Almacenamiento del pid del ultimo hijo*/
+        	pidTrabajadores[i] = trabajadores;
+
             /* Parent process closes up output side of pipe */
             close(fd[1]);
 
@@ -307,8 +315,17 @@ void main(int argc, char const *argv[]){
     
     	printf("\nDirectory stream is now closed\n");
     }
-    else{
-    	printf("hola\n");
+    //Los hijos ejecutan la funcion ciclica esperar/trabajar/enviar senal
+    else trabajar(); 
+
+    /*Luego de finalizar los trabajos, finalizamos a cada hijo*/
+    for (i = 0; i < n_procesos; i++)
+    {
+    	status = kill(pidTrabajadores[i],SIGKILL);
+    	if(status == -1){
+    		perror("Error eliminando proc: ");
+    		exit(1);
+    	}
     }
 	
         
