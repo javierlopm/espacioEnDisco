@@ -19,7 +19,7 @@ void entrada_invalida(){
 
 void trabajar(){
 	while(1){
-		//pause()
+		//USAR SIGSUSPEND
 		//leer de pipe
 
 		//trabajar directorio
@@ -326,8 +326,7 @@ int main(int argc, char const *argv[]){
     else trabajar(); 
 
     /*Luego de finalizar los trabajos, finalizamos a cada hijo*/
-    for (i = 0; i < n_procesos; i++)
-    {
+    for (i = 0; i < n_procesos; i++){
     	status = kill(pidTrabajadores[i],SIGKILL);
     	if(status == -1){
     		perror("Error eliminando proc: ");
