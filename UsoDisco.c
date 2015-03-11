@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include <errno.h>
+#include "colaDirectorios.h"
 
 void entrada_invalida(){
 	printf("Entrada invalida.\n");
