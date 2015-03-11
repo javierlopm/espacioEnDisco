@@ -23,9 +23,8 @@ void main(int argc, char const *argv[]){
 	pid_t   trabajadores;		// id de los procesos trabajadores		
 	char* nombre_entrada;		// apuntador a la ruta que se obtiene por input
 	char arch_salida[15];   	// nombre del archivo de salida
-		
-	DIR *direct=opendir(".");	// apuntador al directorio
-								// con opendir abri el directorio actual
+	
+	DIR *direct;	// apuntador al directorio
 	struct dirent *archivo;		// estructura para el manejo de archivos
 	size_t t = 1;				// iterador para recorrer los directorios
 	FILE *salida;				// apuntador al archivo que obtendra la salida del programa
@@ -33,6 +32,8 @@ void main(int argc, char const *argv[]){
 	{
 	  int fd[2];
 	} ARREGLO;
+	
+	struct lstat fileStat;       // para obtener la info de los archivos
 
 	n_procesos = 1;				// si no se ingresa el numero de procesos, por defecto es 1 
 
@@ -163,16 +164,91 @@ void main(int argc, char const *argv[]){
 
 	}
 
+	/*
+	// Este caso solo para el directorio actual (cuando no hay -d)
+	direct = opendir(".");
+	if (direct){
+		while ((archivo= readdir(direct))){
+			printf("%s\n",archivo->d_name);
+			
+			// Imprime el numero de bloques para los archivos encontrados en el directorio
+			// En el stat esta la info necesaria para los archivos
+			
+			if(stat(archivo->d_name,&fileStat) < 0)    // aqui asigno el stat 
+        		return 1;
+        	printf("Num bloques: %ld\n",fileStat.st_blocks);
+		}
+		closedir(direct);
+	}
+	*/
+
+	//   ******   OTRA MANERA   ******
+	
+	DIR * d;
+
+    /* Open the directory specified by "dir_name". */
+
+    d = opendir (".");
+
+    /* Check it was opened. */
+    if (! d) {
+        fprintf (stderr, "Cannot open directory '%s': %s\n",
+                  strerror (errno));
+        exit (EXIT_FAILURE);
+    }
+    while (1) {
+        struct dirent * entry;
+        const char * d_name;
+
+        /* "Readdir" gets subsequent entries from "d". */
+        entry = readdir (d);
+        if (! entry) {
+            /* There are no more entries in this directory, so break
+               out of the while loop. */
+            break;
+        }
+        //printf("**ESTE ES UN DIRECTORIO: ");
+        d_name = entry->d_name;
+        /* Print the name of the file and directory. */
+	printf ("%s\n", d_name);
+
+	if(lstat(entry->d_name,&fileStat) < 0)    // aqui asigno el stat 
+        		return 1;
+        	printf("Num bloques: %ld\n",fileStat.st_blocks);
+        	
+        	switch (fileStat.st_mode & S_IFMT) {
+        	case S_IFLNK:  printf("symlink\n"); 
+        }
+        	//printf("The file %s a symbolic link\n", (S_ISLNK(fileStat.st_mode)) ? "is" : "is not");
+
+        	//Dice si es archivo o directorio
+			printf( (S_ISDIR(fileStat.st_mode)) ? "*directorio*\n" : "*archivo*\n");
+			
+
+			if ((S_ISDIR(fileStat.st_mode)) )
+				printf("SOY DIRECTORIO\n");
+			else
+				printf("NO SOY DIRECTORIO\n");
+			printf("\n");
+			
+	}	
+
+	// ************************************************
+
+
+
+
 
 	// Arreglo de pipes de acuerdo al numero de procesos
-	struct arregloPipes* arreglo_pipes;
-	arreglo_pipes = (struct arregloPipes*) malloc(sizeof(struct arregloPipes*) * n_procesos);
+	//struct arregloPipes* arreglo_pipes;
+	//arreglo_pipes = (struct arregloPipes*) malloc(sizeof(struct arregloPipes*) * n_procesos);
 
+	/*
 	// Crea tantos pipes como trabajadores haya
 	for (i=0;i<n_procesos;i++){
 		pipe(arreglo_pipes.fd);
 	}
-
+	*
         
         if((trabajadores = fork()) == -1)
         {
@@ -181,9 +257,9 @@ void main(int argc, char const *argv[]){
         }
 
         if(trabajadores == 0)
-        {
+        {*/
                 /* Child process closes up input side of pipe */
-                close(fd[0]);
+        //        close(fd[0]);
 
                 /* Send "string" through the output side of pipe */
                 
@@ -193,13 +269,13 @@ void main(int argc, char const *argv[]){
                 
                 // AQUI ARRIBA EN STRING NO ESTOY CLARA CUAL NOMBRE 
                 //DE ARCHIVO VA, O SI ES LOS DATOS DE SALIDA
-                
+        /*        
                 exit(0);
         }
         else
-        {
+        {*/
                 /* Parent process closes up output side of pipe */
-                close(fd[1]);
+        //        close(fd[1]);
 
                 /* Read in a string from the pipe */
                 
@@ -208,34 +284,42 @@ void main(int argc, char const *argv[]){
 
                 //nbytes = read(fd[0], readbuffer, sizeof(readbuffer));
                 //printf("Received string: %s", readbuffer);
-        }
+        //}
 
+    /*	
         //recorrer directorio
         if ((direct = opendir("src")) == NULL){
 			perror("opendir");
-			return -1;
+			//return -1;
 			}
 
 		printf("Directory stream is now open\n");
 
 
         //SE SUPONE QUE DEBERIA RECORRER EL DIRECTORIO
-        while((archivo=readdir(direct)!=NULL))
+        while(archivo=readdir(direct))
 			
 			printf("%s\n", archivo->d_name);
 			
         if (closedir(direct) == -1){
 			perror("closedir");
-			return -1;
+			//return -1;
 		}
 
 		printf("\nDirectory stream is now closed\n");
         
 }
-
+	*/
 /*NOTA IMPORTANTE:
 	EN ESTA PAGINA
 		http://totaki.com/poesiabinaria/2011/09/listar-archivos-dentro-de-un-directorio-o-carpeta-en-c/
 
 	HAY INFO DE COMO RECORRER DIRECTORIOS Y A PARTE PROCESAR UN ARCHIVO!! :)
 */
+
+/*MAS IMPORTANTE:
+	http://codewiki.wikidot.com/c:system-calls:stat
+
+	ES LA QUE TAL
+*/
+}
