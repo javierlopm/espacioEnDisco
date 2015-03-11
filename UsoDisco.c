@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include <errno.h>
+#include "colaDirectorios.h"
 
 void entrada_invalida(){
 	printf("Entrada invalida.\n");
@@ -68,7 +69,7 @@ void main(int argc, char const *argv[]){
 			exit(0);
 		}
 		// Solo se indica el nombre del archivo de salida
-		else if (strcmp(argv[1],"salida")==0){
+		else if (strcmp(argv[1],"salida")==0){    //!!!!!!!!!No hay que comparar con el string salida, hay que ver si es diferente a -h y luego si el archivo existe
 
 			strcpy(arch_salida,argv[1]);
 			n_procesos = 1;
@@ -106,15 +107,14 @@ void main(int argc, char const *argv[]){
 
 			strcpy(nombre_entrada,argv[2]);
 			// Si el directorio es vacio
-			if ((direct = opendir(nombre_entrada)) == NULL){
-				perror("opendir: ");
-				exit(0);
-			}
 			n_procesos = 1;
 		}
-		else
+		else entrada_invalida();
 
-			entrada_invalida();
+		if ((direct = opendir(nombre_entrada)) == NULL){
+			perror("opendir: ");
+			exit(0);
+		}
 
 		strcpy(arch_salida,argv[3]);
 
@@ -123,44 +123,28 @@ void main(int argc, char const *argv[]){
 	
 	if (argc == 6){
 
-		if (strcmp(argv[1], "-n") == 0){
+		if ((strcmp(argv[1], "-n") == 0) && (strcmp(argv[3], "-d") == 0)) {
 			
+			//Extraccion de argumentos propios de -n -d
 			n_procesos = atoi(argv[2]);
-			
-			if (strcmp(argv[3], "-d") == 0){
-			
-				strcpy(nombre_entrada,argv[4]);
-				// Si el directorio es vacio
-				if ((direct = opendir(nombre_entrada)) == NULL){
-					perror("opendir: ");
-					exit(0);
-				}
-			}
-
-			strcpy(arch_salida,argv[5]);
-
+			strcpy(nombre_entrada,argv[4]);
 		}
-
-		if (strcmp(argv[1], "-d") == 0){
-
+		if ((strcmp(argv[1], "-d") == 0) && (strcmp(argv[3], "-n") == 0)) {
+			
+			//Extraccion de argumentos propios de -d -n
+			n_procesos = atoi(argv[4]);
 			strcpy(nombre_entrada,argv[2]);
-			// Si el directorio es vacio
-			if ((direct = opendir(nombre_entrada)) == NULL){
-				perror("opendir: ");
-				exit(0);
-			}
-
-			if (strcmp(argv[3], "-n") == 0)
-				
-				n_procesos = atoi(argv[4]);	
-
-			strcpy(arch_salida,argv[5]);
-			
 		}
+		else entrada_invalida(); 
 
-		else
-		
-			entrada_invalida();
+		//Extraccion de la salida, comun a ambos formatos
+		strcpy(arch_salida,argv[5]);
+
+		if ((direct = opendir(nombre_entrada)) == NULL){
+			// Si el directorio es vacio
+			perror("opendir: ");
+			exit(0);
+		}
 
 	}
 

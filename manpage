@@ -1,0 +1,36 @@
+
+
+NAME
+       UsoDisco - Muestra de espacio usado por archivos regulares en un 
+                  directorio y cuenta los enlaces lógicos.
+
+
+SYNOPSIS
+       UsoDisco [-h] | [-n i] [-d directorio] <salida>
+
+DESCRIPTION
+
+       El  comando  por  defecto  realiza  un  recorrido  por   el
+       directorio  actual  y  entrega  en  el archivo <salida> los 
+       archivos  regulares  que se encuentran en él, se entrega la 
+       suma de sus tamaños y la cantidad de enlaces lógicos que se
+       encuentran.   La  concurrencia  default  es  de  1  proceso
+       trabajador
+
+OPTIONS
+       <salida> 
+              Archivo de salida del comando
+
+       -h Ayuda 
+              Ayuda basica sobre el uso del comando
+
+       -n <entero>
+              Nivel de concurrencia que usará el comando, si no se
+              especifica será uno.  Por cada nivel de concurrencia
+              se inicia un nuevo proceso trabajador  que ayudara a 
+              analizar directorios hijos. 
+
+       -d <directorio>
+              Directorio a analizar, por defecto se usará el 
+              actual ".".
+
