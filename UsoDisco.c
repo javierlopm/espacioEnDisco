@@ -15,6 +15,55 @@ void entrada_invalida(){
 	exit(0);
 }
 
+/**
+ * 	Funcion que recibe los argumentos del comando y las posiciones a revisar
+ *  y extrae en un string el path del directorio actual. Es necesario guardar
+ *  el espacio de nomEntrada con antelacion
+ */
+ /*
+int extraer_procesos(
+		char *nomEntrada,		//Apuntador a string con el nombre del archivo
+		char *argv,				//Arreglo con los argumentos
+		int  *argVerificables,	//Arreglo de enteros de posiciones a verificar de la linea de comando
+		int  cantArg			//Cantidad de enteros en el arreglo
+){
+	int boolVerificado = 0;
+	int i;
+	char * numProcesos;
+	char * aux;
+
+	for (i = 0; i < cantArg; ++i)
+	{
+		boolVerificado = 
+			boolVerificado || (strcmp(argv[(argVerificables[i])],"-n") == 0);
+
+		//Cuando encuentra el -n asigna el string del siguiente ar a numProcesos
+		if(boolVerificado) {
+			numProcesos = argVerificables[i + 1];
+			break;
+		}
+	}
+
+	if (boolVerificado){
+		n_procesos = atoi(numProcesos);
+		aux = getcwd(NULL,0);
+		strcpy(nomEntrada,aux);
+		/** REVISAR ARCHIVO VA EN OTRA FUNCION
+		// Si el directorio es vacio generar error y salir
+		if ((direct = opendir(nombre_entrada)) == NULL){
+			perror("opendir: ");
+			exit(0);
+		}
+		 
+		return 1;
+	}
+	else{
+		retun 0; //Extracion de argumento fallido
+	}
+
+	
+}
+*/
 void main(int argc, char const *argv[]){
 	
 	int n_procesos, i;    		/*entero	n_procesos: numero de procesos que realizaran el trabajo
@@ -29,6 +78,9 @@ void main(int argc, char const *argv[]){
 	struct dirent *archivo;		// estructura para el manejo de archivos
 	size_t t = 1;				// iterador para recorrer los directorios
 	FILE *salida;				// apuntador al archivo que obtendra la salida del programa
+	int aux;	//Entero auxiliar para ver el estado final de las funciones
+	int arregloPos[3] = { 1 , 3 , 5 };//Posiciones de argumentos a revisar
+
 	typedef struct arregloPipes
 	{
 	  int fd[2];
@@ -36,9 +88,10 @@ void main(int argc, char const *argv[]){
 
 	n_procesos = 1;				// si no se ingresa el numero de procesos, por defecto es 1 
 
+	nombre_entrada = (char *) malloc(sizeof(char) * 255);
 
 	// Numero de argumentos invalido
-	if (argc < 2 | argc == 3 | argc == 5 | argc > 6) {
+	if (argc < 2 | argc == 3 | argc >= 5) {
 		entrada_invalida();	
 	}
 	
@@ -67,7 +120,7 @@ void main(int argc, char const *argv[]){
 			exit(0);
 		}
 		// Solo se indica el nombre del archivo de salida
-		else if (strcmp(argv[1],"salida")==0){
+		else if (strcmp(argv[1],"salida")==0){ //No hay que comparar con salida!!!!!!!!!!!!!
 
 			strcpy(arch_salida,argv[1]);
 			n_procesos = 1;
@@ -88,78 +141,11 @@ void main(int argc, char const *argv[]){
 
 	}
 
-	if (argc == 4){
+	else (argc == 4 || argc == mas...){
 
-		if (strcmp(argv[1],"-n") == 0){
-
-			n_procesos = atoi(argv[2]);
-			nombre_entrada = getcwd(NULL,0);
-			// Si el directorio es vacio
-			if ((direct = opendir(nombre_entrada)) == NULL){
-				perror("opendir: ");
-				exit(0);
-			}
-		}
-
-		else if (strcmp(argv[1],"-d") == 0){
-
-			strcpy(nombre_entrada,argv[2]);
-			// Si el directorio es vacio
-			if ((direct = opendir(nombre_entrada)) == NULL){
-				perror("opendir: ");
-				exit(0);
-			}
-			n_procesos = 1;
-		}
-		else
-
-			entrada_invalida();
-
-		strcpy(arch_salida,argv[3]);
-
-	}
-	
-	
-	if (argc == 6){
-
-		if (strcmp(argv[1], "-n") == 0){
+		/*Aqui iniciara el recorrido de flags*/
 			
-			n_procesos = atoi(argv[2]);
-			
-			if (strcmp(argv[3], "-d") == 0){
-			
-				strcpy(nombre_entrada,argv[4]);
-				// Si el directorio es vacio
-				if ((direct = opendir(nombre_entrada)) == NULL){
-					perror("opendir: ");
-					exit(0);
-				}
-			}
-
-			strcpy(arch_salida,argv[5]);
-
-		}
-
-		if (strcmp(argv[1], "-d") == 0){
-
-			strcpy(nombre_entrada,argv[2]);
-			// Si el directorio es vacio
-			if ((direct = opendir(nombre_entrada)) == NULL){
-				perror("opendir: ");
-				exit(0);
-			}
-
-			if (strcmp(argv[3], "-n") == 0)
-				
-				n_procesos = atoi(argv[4]);	
-
-			strcpy(arch_salida,argv[5]);
-			
-		}
-
-		else
-		
-			entrada_invalida();
+			//entrada_invalida();
 
 	}
 
