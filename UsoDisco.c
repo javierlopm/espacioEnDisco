@@ -105,15 +105,14 @@ void main(int argc, char const *argv[]){
 
 			strcpy(nombre_entrada,argv[2]);
 			// Si el directorio es vacio
-			if ((direct = opendir(nombre_entrada)) == NULL){
-				perror("opendir: ");
-				exit(0);
-			}
 			n_procesos = 1;
 		}
-		else
+		else entrada_invalida();
 
-			entrada_invalida();
+		if ((direct = opendir(nombre_entrada)) == NULL){
+			perror("opendir: ");
+			exit(0);
+		}
 
 		strcpy(arch_salida,argv[3]);
 
@@ -122,44 +121,28 @@ void main(int argc, char const *argv[]){
 	
 	if (argc == 6){
 
-		if (strcmp(argv[1], "-n") == 0){
+		if ((strcmp(argv[1], "-n") == 0) && (strcmp(argv[3], "-d") == 0)) {
 			
+			//Extraccion de argumentos propios de -n -d
 			n_procesos = atoi(argv[2]);
-			
-			if (strcmp(argv[3], "-d") == 0){
-			
-				strcpy(nombre_entrada,argv[4]);
-				// Si el directorio es vacio
-				if ((direct = opendir(nombre_entrada)) == NULL){
-					perror("opendir: ");
-					exit(0);
-				}
-			}
-
-			strcpy(arch_salida,argv[5]);
-
+			strcpy(nombre_entrada,argv[4]);
 		}
-
-		if (strcmp(argv[1], "-d") == 0){
-
+		if ((strcmp(argv[1], "-d") == 0) && (strcmp(argv[3], "-n") == 0)) {
+			
+			//Extraccion de argumentos propios de -d -n
+			n_procesos = atoi(argv[4]);
 			strcpy(nombre_entrada,argv[2]);
-			// Si el directorio es vacio
-			if ((direct = opendir(nombre_entrada)) == NULL){
-				perror("opendir: ");
-				exit(0);
-			}
-
-			if (strcmp(argv[3], "-n") == 0)
-				
-				n_procesos = atoi(argv[4]);	
-
-			strcpy(arch_salida,argv[5]);
-			
 		}
+		else entrada_invalida(); 
 
-		else
-		
-			entrada_invalida();
+		//Extraccion de la salida, comun a ambos formatos
+		strcpy(arch_salida,argv[5]);
+
+		if ((direct = opendir(nombre_entrada)) == NULL){
+			// Si el directorio es vacio
+			perror("opendir: ");
+			exit(0);
+		}
 
 	}
 

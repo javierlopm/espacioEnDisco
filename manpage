@@ -9,35 +9,28 @@ SYNOPSIS
        UsoDisco [-h] | [-n i] [-d directorio] <salida>
 
 DESCRIPTION
-       The  default signal for kill is TERM.  Use -l or -L to list
-       available signals.   Particularly  useful  signals  include
-       HUP,  INT,  KILL, STOP, CONT, and 0.  Alternate signals may
-       be specified in three ways: -9, -SIGKILL or  -KILL.   Nega‐
-       tive PID values may be used to choose whole process groups;
-       see the PGID column in ps command output.  A PID of  -1  is
-       special; it indicates all processes except the kill process
-       itself and init.
+
+       El  comando  por  defecto  realiza  un  recorrido  por   el
+       directorio  actual  y  entrega  en  el archivo <salida> los 
+       archivos  regulares  que se encuentran en él, se entrega la 
+       suma de sus tamaños y la cantidad de enlaces lógicos que se
+       encuentran.   La  concurrencia  default  es  de  1  proceso
+       trabajador
 
 OPTIONS
-       <salida> [...]
-              Send signal to every <pid> listed.
+       <salida> 
+              Archivo de salida del comando
 
-       -h
+       -h Ayuda 
+              Ayuda basica sobre el uso del comando
 
        -n <entero>
+              Nivel de concurrencia que usará el comando, si no se
+              especifica será uno.  Por cada nivel de concurrencia
+              se inicia un nuevo proceso trabajador  que ayudara a 
+              analizar directorios hijos. 
 
        -d <directorio>
-
-       -s <signal>
-       --signal <signal>
-              Specify the signal to be sent.  The  signal  can  be
-              specified  by using name or number.  The behavior of
-              signals is explained in signal(7) manual page.
-
-       -l, --list [signal]
-              List signal names.  This option has  optional  argu‐
-              ment,  which  will  convert  signal number to signal
-              name, or other way round.
-
-       -L, --table
+              Directorio a analizar, por defecto se usará el 
+              actual ".".
 
