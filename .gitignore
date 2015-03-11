@@ -1,4 +1,5 @@
 *.o
+ejemplos*
 *.txt
 a.out
 direnth.c
