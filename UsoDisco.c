@@ -34,7 +34,7 @@ void main(int argc, char const *argv[]){
 	  int fd[2];
 	} ARREGLO;
 	
-	struct lstat fileStat;       // para obtener la info de los archivos
+	struct stat fileStat;       // para obtener la info de los archivos
 
 	n_procesos = 1;				// si no se ingresa el numero de procesos, por defecto es 1 
 
@@ -201,6 +201,7 @@ void main(int argc, char const *argv[]){
         	printf("Num bloques: %ld\n",fileStat.st_blocks);
         	
         	switch (fileStat.st_mode & S_IFMT) {
+        		
         	case S_IFLNK:  printf("symlink\n"); 
         }
         	//printf("The file %s a symbolic link\n", (S_ISLNK(fileStat.st_mode)) ? "is" : "is not");
