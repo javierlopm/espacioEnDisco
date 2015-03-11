@@ -1,0 +1,43 @@
+
+
+NAME
+       UsoDisco - Muestra de espacio usado por archivos regulares en un 
+                  directorio y cuenta los enlaces lógicos.
+
+
+SYNOPSIS
+       UsoDisco [-h] | [-n i] [-d directorio] <salida>
+
+DESCRIPTION
+       The  default signal for kill is TERM.  Use -l or -L to list
+       available signals.   Particularly  useful  signals  include
+       HUP,  INT,  KILL, STOP, CONT, and 0.  Alternate signals may
+       be specified in three ways: -9, -SIGKILL or  -KILL.   Nega‐
+       tive PID values may be used to choose whole process groups;
+       see the PGID column in ps command output.  A PID of  -1  is
+       special; it indicates all processes except the kill process
+       itself and init.
+
+OPTIONS
+       <salida> [...]
+              Send signal to every <pid> listed.
+
+       -h
+
+       -n <entero>
+
+       -d <directorio>
+
+       -s <signal>
+       --signal <signal>
+              Specify the signal to be sent.  The  signal  can  be
+              specified  by using name or number.  The behavior of
+              signals is explained in signal(7) manual page.
+
+       -l, --list [signal]
+              List signal names.  This option has  optional  argu‐
+              ment,  which  will  convert  signal number to signal
+              name, or other way round.
+
+       -L, --table
+
