@@ -39,7 +39,7 @@ void desencolar(colaDir *aux){
         aux->tam = (aux->tam) -1;
         segundo = (aux->primero)->siguiente;
 
-        free(aux->primero) //Eliminamos la caja y no su contenido
+        free(aux->primero); //Eliminamos la caja y no su contenido
         if(aux->tam == 0){
             aux->primero = NULL;
             aux->ultimo  = NULL;
@@ -62,14 +62,14 @@ char *mostrarPrimero(colaDir *aux){
 char *pop(colaDir *aux){
     char *salida;
 
-    salida = aux->primero;
+    salida = aux->primero->contenido;
     desencolar(aux);
 
     return salida;
 }
 
 int empty(colaDir *aux){
-    return (aux->size == 0);
+    return (aux->tam == 0);
 }
 
 void eliminarLista(colaDir *aux){

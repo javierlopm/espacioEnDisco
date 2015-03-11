@@ -34,13 +34,20 @@ void trabajar(){
 //Crear manejador de senal para cuando un proceso termine y cambie su estado a libre
 //void handler
 
-void main(int argc, char const *argv[]){
+
+typedef struct arregloPipes
+{
+  int fd[2];
+} arregloPipes;
+
+
+int main(int argc, char const *argv[]){
 	
 	int n_procesos;    			//numero de procesos que realizaran el trabajo
 	int i;						//Variable auxiliar de iterador
 	int *trabLibres;			//Arreglo booleano de 
 	int *pidTrabajadores;		//Arreglo con pid de trabajadores
-	int stat;					//Variable auxiliar para status de procesos
+	int status;					//Variable auxiliar para status de procesos
 								
 	pid_t   trabajadores;		// id de los procesos trabajadores		
 	char* nombre_entrada;		// apuntador a la ruta que se obtiene por input
@@ -51,10 +58,7 @@ void main(int argc, char const *argv[]){
 	size_t t = 1;				// iterador para recorrer los directorios
 	FILE *salida;				// apuntador al archivo que obtendra la salida del programa
 	
-	typedef struct arregloPipes
-	{
-	  int fd[2];
-	} ARREGLO;
+	arregloPipes **arreglo_pipes;
 	
 	struct stat fileStat;       // para obtener la info de los archivos
 
@@ -191,7 +195,7 @@ void main(int argc, char const *argv[]){
 
     /* Check it was opened. */
     if (! d) {
-        fprintf (stderr, "Cannot open directory '%s': %s\n",
+        fprintf (stderr, "Cannot open directory : %s\n",
                   strerror (errno));
         exit (EXIT_FAILURE);
     }
@@ -219,7 +223,7 @@ void main(int argc, char const *argv[]){
         		
         	case S_IFLNK:  printf("symlink\n"); 
         }
-        	//printf("The file %s a symbolic link\n", (S_ISLNK(fileStat.st_mode)) ? "is" : "is not");
+        	printf("The file %s a symbolic link\n", (S_ISLNK(fileStat.st_mode)) ? "is" : "is not");
 
         	//Dice si es archivo o directorio
 			printf( (S_ISDIR(fileStat.st_mode)) ? "*directorio*\n" : "*archivo*\n");
@@ -242,7 +246,9 @@ void main(int argc, char const *argv[]){
 
 	// Arreglo de pipes de acuerdo al numero de procesos
 	//struct arregloPipes* arreglo_pipes;
-	//arreglo_pipes = (struct arregloPipes*) malloc(sizeof(struct arregloPipes*) * n_procesos);
+
+
+	arreglo_pipes = (arregloPipes**) malloc(sizeof(arregloPipes*) * n_procesos);
 	
 	/*Inicializacion de arreglo booleano de trabajadores libres*/
 	trabLibres 		= (int *) malloc(sizeof(int) * n_procesos);
@@ -254,7 +260,8 @@ void main(int argc, char const *argv[]){
 
 	// Creamos tantos pipes y procesos como indique el nivel de concurrencia
 	for (i=0;i<n_procesos;i++){
-		pipe(arreglo_pipes.fd);
+		arreglo_pipes[i] = (arregloPipes*) malloc(sizeof(arregloPipes));
+		pipe(arreglo_pipes[i]->fd);
         
         if((trabajadores = fork()) == -1)
         {
@@ -265,7 +272,7 @@ void main(int argc, char const *argv[]){
         if(trabajadores == 0){	
         	/*INICIALIZACION DE CHILD*/
             /* Child process closes up input side of pipe */
-            close(fd[0]);
+            close(arreglo_pipes[i]->fd[0]);
 
             /* Send "string" through the output side of pipe */
             
@@ -284,7 +291,7 @@ void main(int argc, char const *argv[]){
         	pidTrabajadores[i] = trabajadores;
 
             /* Parent process closes up output side of pipe */
-            close(fd[1]);
+            close(arreglo_pipes[i]->fd[1]);
 
             /* Read in a string from the pipe */
             
@@ -327,8 +334,8 @@ void main(int argc, char const *argv[]){
     		exit(1);
     	}
     }
-	
-        
+
+    return 0;
 }
 	
 /*NOTA IMPORTANTE:
@@ -343,4 +350,3 @@ void main(int argc, char const *argv[]){
 
 	ES LA QUE TAL
 */
-}
