@@ -17,14 +17,36 @@ void entrada_invalida(){
 	exit(0);
 }
 
-void trabajar(){
+
+typedef struct arregloPipes
+{
+  int fd[2];
+} arregloPipes;
+
+
+void trabajar(int n_procesos,int *pidTrabajadores,arregloPipes **arreglo_pipes){
+	int nbytes;
+	int i,j;
+	int childpid;
+	int fd_proc[2];				//Pipe de un proceso particular (hijo)
+	childpid = getpid();
+    for (i=0;i<n_procesos;i++){
+    	if (pidTrabajadores[i]==childpid)
+    		for(j=0;j<2;j++){
+    			fd_proc[j] = arreglo_pipes[i]->fd[j];
+    		}
+    }
+
 	while(1){
 		//USAR SIGSUSPEND
+
+		//cierro el extremo de escritura fd[1]
 		//leer de pipe
 
 		//trabajar directorio
 
 		//escribe al padre
+		//nbytes = read(fd_proc[0], readbuffer, sizeof(readbuffer));
 		//envia senal de finalizacion y luego pausa
 	}
 
@@ -35,12 +57,6 @@ void trabajar(){
 //void handler
 
 
-typedef struct arregloPipes
-{
-  int fd[2];
-} arregloPipes;
-
-
 int main(int argc, char const *argv[]){
 	
 	int n_procesos;    			//numero de procesos que realizaran el trabajo
@@ -48,7 +64,6 @@ int main(int argc, char const *argv[]){
 	int *trabLibres;			//Arreglo booleano de 
 	int *pidTrabajadores;		//Arreglo con pid de trabajadores
 	int status;					//Variable auxiliar para status de procesos
-								
 	pid_t   trabajadores;		// id de los procesos trabajadores		
 	char* nombre_entrada;		// apuntador a la ruta que se obtiene por input
 	char arch_salida[15];   	// nombre del archivo de salida
@@ -313,7 +328,7 @@ int main(int argc, char const *argv[]){
     
     
         //SE SUPONE QUE DEBERIA RECORRER EL DIRECTORIO
-        while((archivo=readdir(direct)!=NULL)) printf("%s\n", archivo->d_name);
+        while((archivo=readdir(direct))!=NULL) printf("%s\n", archivo->d_name);
     		
         if (closedir(direct) == -1){
     		perror("closedir");
@@ -323,7 +338,12 @@ int main(int argc, char const *argv[]){
     	printf("\nDirectory stream is now closed\n");
     }
     //Los hijos ejecutan la funcion ciclica esperar/trabajar/enviar senal
-    else trabajar(); 
+
+
+    // Recorro el arreglo de pid para encontrar el pipe correspondiente y pasarlo como parametro al
+    // procedimiento trabajar, para poder cerrar/abrir el extremo correspondiente
+
+    else trabajar(n_procesos,pidTrabajadores,arreglo_pipes); 
 
     /*Luego de finalizar los trabajos, finalizamos a cada hijo*/
     for (i = 0; i < n_procesos; i++){
