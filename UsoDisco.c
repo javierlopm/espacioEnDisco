@@ -67,7 +67,7 @@ void main(int argc, char const *argv[]){
 			exit(0);
 		}
 		// Solo se indica el nombre del archivo de salida
-		else if (strcmp(argv[1],"salida")==0){
+		else if (strcmp(argv[1],"salida")==0){    //!!!!!!!!!No hay que comparar con el string salida, hay que ver si es diferente a -h y luego si el archivo existe
 
 			strcpy(arch_salida,argv[1]);
 			n_procesos = 1;
