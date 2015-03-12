@@ -10,8 +10,14 @@
 #include <signal.h> 
 #include "colaDirectorios.h"
 
+/*Constantes read/write de pipes*/
 #define READ  0
 #define WRITE 1
+
+/*Constantes que definen tipo archivo*/
+#define SOFT  1
+#define DIR   2
+#define ARCH  3 
 
 void entrada_invalida(){
 	printf("Entrada invalida.\n");
@@ -27,48 +33,68 @@ typedef struct arregloPipes
 } arregloPipes;
 
 
-void trabajar(int n_procesos,int *pidTrabajadores,arregloPipes **arreglo_pipes,int *fdInPadre){
-	int nbytes;
-	int i,j;
-	int childpid;
+void trabajar(
+	int n_procesos,					//Numero de procesos hermanos
+	int *pidTrabajadores,			//Arreglo con los pid 
+	arregloPipes **arreglo_pipes,   //Arreglo de pipes para entrada
+	int *fdInPadre					//Pipe de salida para comunicar con el padre
+	)
+{	
+	/*Enteros*/
+	int i;						//Iterador auxiliar
+	int childpid;				//Pid del proceso actual
 	int *fd_proc;				//Pipe de un proceso particular (hijo)
-	char dirTransicional[255];
-	char *salida;
-	char *arcActual;
-	char *aux;
-	int status;
+	int numLinks   = 0;			//Cantidad de soflinks encontrados
+	int numBloques = 0;			//Cantidad de bloques encontrados
+	int status;					//Status de salida de las escrituras a pipes
 
-	childpid = getpid();      //Id del proceso
-
+	/*Strings*/
+	char dirTransicional[255];  //String para la lectura del directorio a trab
+	char *salida;				//String dinamico para comunicar al padre
+	char *arcActual;			//Nombre del string 
+	char *aux;					//String auxiliar para concatenacion dinamica
 	
+	/*Estructura auxiliar*/
+	colaDir *dirPorRecorrer;	//Cola de directorios
 
+
+	//Busqueda del pipe adecuado para el pid del trabajador actual
+	childpid = getpid();	
     for (i=0;i<n_procesos;i++){
     	if (pidTrabajadores[i]==childpid) fd_proc = arreglo_pipes[i]->fd;
     }
 
-    close(fd_proc[WRITE]);
-    close(fdInPadre[READ]);
+    close(fd_proc[WRITE]);  //Se cierra el extremo write para leer del padre
+    close(fdInPadre[READ]); //Se cierra el extremo read para escribir al padre
 
 	while(1){
-		//cierro el extremo de escritura fd[1]
-		//leer de pipe
-		status = read(fd_proc[0], dirTransicional, 255);
+		//Limpiar string y leer directorio a trabajar
+		dirTransicional[0] = '\0';
+		status = read(fd_proc[0], dirTransicional, 255 * sizeof(char));
 		if(status == -1){
 			perror("Error de lectura:");
 			exit(1)
 		}
-		//trabajar directorio
 
+		/*Inicializacion de la cola de directorios pendientes*/
+		dirPorRecorrer = (colaDir *) malloc (sizeof(colaDir));
+		crearCola(dirPorRecorrer);
+		
+		//trabajar directorio
 		while(1){printf("Hay algo por recorrer\n");}
 
-		//escribe al padre
-		status = write(fdInPadre, , strlen());
-		if(status == -1){
-			perror("Error de escritura:");
-			exit(1)
-		}
+
 		
-		//envia senal de finalizacion y luego pausa
+
+		//Escribir al padre en formato fijo
+		status  = write(fdInPadre,&numBloques, sizeof(int)); //Bloque
+		status += write(fdInPadre,&numLinks  , sizeof(int)); //Links
+		status += write(fdInPadre,salida     , sizeof(char)*strlen(salida)); //Strings recorridos
+		
+		//Libera la cola
+		eliminarCola(dirPorRecorrer);
+		free(dirPorRecorrer);
+
 	}
 
 	exit(0);
@@ -90,7 +116,7 @@ int main(int argc, char const *argv[]){
 	int info_archivo;           // guarda la info del archivo que da stat
 	
 	/*Strings*/
-	char nombre_entrada[255];		// apuntador a la ruta que se obtiene por input
+	char nombre_entrada[255];	// apuntador a la ruta que se obtiene por input
 	char arch_salida[255];   	// nombre del archivo de salida
 	char *dirTransicional;      // directorio auxiliar para las colas
 	char *aux;
@@ -393,8 +419,10 @@ int main(int argc, char const *argv[]){
     }
 
     if(trabajadores != 0){	//El padre recorre directorios
+
         //Reserva de espacio para la cola de procesos a trabajar
         noProcesados = (colaDir *) malloc(sizeof(colaDir));
+        crearCola(noProcesados);
 
         //Cerramos el pipe para realizar lectura
         close(fdInPadre[WRITE]);

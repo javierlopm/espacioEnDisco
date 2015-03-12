@@ -15,4 +15,4 @@ void desencolar   (colaDir *aux);
 char *mostrarPrimero(colaDir *aux);
 char *pop(colaDir *aux);
 
-void eliminarLista(colaDir *aux);
+void eliminarCola(colaDir *aux);
