@@ -43,8 +43,9 @@ void main(int argc, char const *argv[]){
 	int status;					//Variable auxiliar para status de procesos
 								
 	pid_t   trabajadores;		// id de los procesos trabajadores		
-	char* nombre_entrada;		// apuntador a la ruta que se obtiene por input
-	char arch_salida[15];   	// nombre del archivo de salida
+	char nombre_entrada[255];		// apuntador a la ruta que se obtiene por input
+	char arch_salida[255];   	// nombre del archivo de salida
+	char *dirTransicional;      // directorio auxiliar para las colas
 	
 	DIR *direct;	// apuntador al directorio
 	struct dirent *archivo;		// estructura para el manejo de archivos
@@ -100,10 +101,8 @@ void main(int argc, char const *argv[]){
 				exit(0);
 			}
 
-			}
+		}
 		// Si los comandos ejecutados son distintos a -h o salida
-		
-
 		else entrada_invalida();
 
 	}
@@ -225,10 +224,37 @@ void main(int argc, char const *argv[]){
 			printf( (S_ISDIR(fileStat.st_mode)) ? "*directorio*\n" : "*archivo*\n");
 			
 
-			if ((S_ISDIR(fileStat.st_mode)) )
+			if ((S_ISDIR(fileStat.st_mode)) ){
 				printf("SOY DIRECTORIO\n");
-			else
-				printf("NO SOY DIRECTORIO\n");
+
+
+			
+				/*Creacion del string para pasar a los hijos*/
+				dirTransicional    = (char *) malloc(sizeof(char) * 255);
+				dirTransicional[0] = '\0';
+				strcpy(dirTransicional,nombre_entrada); //Revisar si termina en /
+				strcat(dirTransicional,"/"			 );
+				strcat(dirTransicional,entry->d_name );
+
+				for (i = 0; i < n_procesos; i++){
+					//Revisamos si hay algun proceso libre y le asignamos el dir
+					if(trabLibres[i]){
+						trabLibres[i] = 0;
+
+						/*Escribir en su pipe MARIIIII*/
+						write(arreglo_pipes[i]->fd[1],dirTransicional,sizeof(dirTransicional));
+						//free(dirTransicional)
+						break;
+					}
+
+					//Si no se encuentra encolamos el directorio a la cola de
+					//no procesados
+					if((i == n_procesos) && !(trabLibres[i])){
+						noProcesados.encolar(dirTransicional);
+					}
+				}
+				dirTransicional = NULL; //Apuntador tomado por un proceso o cola
+			} else printf("NO SOY DIRECTORIO\n");
 			printf("\n");
 			
 	}	
@@ -314,6 +340,10 @@ void main(int argc, char const *argv[]){
     	}
     
     	printf("\nDirectory stream is now closed\n");
+
+    	/*
+    		Al encontrar el directorio buscar un 
+    	*/
     }
     //Los hijos ejecutan la funcion ciclica esperar/trabajar/enviar senal
     else trabajar(); 
@@ -326,6 +356,8 @@ void main(int argc, char const *argv[]){
     		exit(1);
     	}
     }
+
+    //Eliminar los strings
 	
         
 }
