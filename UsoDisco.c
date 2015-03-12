@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <signal.h> 
 #include "colaDirectorios.h"
+#include "trabajadores.h"
+
 
 /*Constantes read/write de pipes*/
 #define READ  0
@@ -91,7 +93,8 @@ void trabajar(
 		while(1){printf("Hay algo por recorrer\n");}
 
 		//Escribir al padre en formato fijo
-		status  = write(fdInPadre,&numBloques, sizeof(int)); //Bloque
+		status  = write(fdInPadre,&childpid  , sizeof(int)); //Entero que realizo la llamada
+		status  = write(fdInPadre,&numBloques, sizeof(int)); //Bloques
 		status += write(fdInPadre,&numLinks  , sizeof(int)); //Links
 		status += write(fdInPadre,salida     , sizeof(char)*strlen(salida)); //Strings recorridos
 		
@@ -334,7 +337,7 @@ int main(int argc, char const *argv[]){
 						trabLibres[i] = 0;
 
 						/*Escribir en su pipe MARIIIII*/
-						write(arreglo_pipes[i]->fd[1],dirTransicional,sizeof(dirTransicional));
+						write(arreglo_pipes[i]->fd[1],dirTransicional,sizeof(dirTransicional));//ESTO YA NO DEBE HACERSE ASI, DEBEMOS PONERELOS A TRABAJAR LUEGO DE HABER RECIBIDO TODOS LOS 
 						//free(dirTransicional)
 						break;
 					}
@@ -342,7 +345,7 @@ int main(int argc, char const *argv[]){
 					//Si no se encuentra encolamos el directorio a la cola de
 					//no procesados
 					if((i == n_procesos) && !(trabLibres[i])){
-						agregarEnCola(noProcesados,dirTransicional);
+						agregarEnCola(noProcesados,dirTransicional); 
 					}
 				}
 				dirTransicional = NULL; //Apuntador tomado por un proceso o cola
