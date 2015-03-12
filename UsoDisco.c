@@ -370,16 +370,3 @@ int main(int argc, char const *argv[]){
     //Eliminar los strings
     return 0;
 }
-	
-/*NOTA IMPORTANTE:
-	EN ESTA PAGINA
-		http://totaki.com/poesiabinaria/2011/09/listar-archivos-dentro-de-un-directorio-o-carpeta-en-c/
-
-	HAY INFO DE COMO RECORRER DIRECTORIOS Y A PARTE PROCESAR UN ARCHIVO!! :)
-*/
-
-/*MAS IMPORTANTE:
-	http://codewiki.wikidot.com/c:system-calls:stat
-
-	ES LA QUE TAL
-*/
