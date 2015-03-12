@@ -68,7 +68,11 @@ void trabajar(
 	//Busqueda del pipe adecuado para el pid del trabajador actual
 	childpid = getpid();	
     for (i=0;i<arrTrab->tam;i++){
-    	if (getPidN(arrTrab,i)==childpid) fd_proc = getPipeN(arrTrab,i);
+    	printf("Este es el pid que estoy verificando %d\n",getPidN(arrTrab,i));
+    	if (getPidN(arrTrab,i)==childpid){
+    		printf("Found it no joda pid %d, i=%d\n",childpid,i);
+    		fd_proc = getPipeN(arrTrab,i);
+    	}
     }
 
     close(fd_proc[WRITE]);  //Se cierra el extremo write para leer del padre
@@ -77,7 +81,8 @@ void trabajar(
 	while(1){
 		//Limpiar string y leer directorio a trabajar
 		dirTransicional[0] = '\0';
-		status = read(fd_proc[READ], dirTransicional, 255 * sizeof(char));
+		printf("FILE DESCRIPTOR: %d\n",fd_proc[READ]);
+		status = read(fd_proc[READ], dirTransicional, strlen(dirTransicional)+1);
 		if(status == -1){
 			perror("Error de lectura:");
 			exit(1);
