@@ -9,7 +9,7 @@
 #include <errno.h>
 #include <signal.h> 
 #include "colaDirectorios.h"
-#include "trabajadores.h"
+#include "trabajador.h"
 
  
 /*Constantes read/write de pipes*/
@@ -21,9 +21,9 @@
 #define DIRECT  2
 #define ARCH 3
 
-int tipoArchivo(){
-	if (S_ISLNK(fileStat.st_mode)) return 1;
-	if (S_ISDIR(fileStat.st_mode)) return 2 ;
+int tipoArchivo(struct stat archivo){
+	if (S_ISLNK(archivo.st_mode)) return 1;
+	if (S_ISDIR(archivo.st_mode)) return 2 ;
 	else return 3;
 
 }
@@ -43,11 +43,9 @@ typedef struct arregloPipes
 
 
 void trabajar(
-	int n_procesos,					//Numero de procesos hermanos
-	int *pidTrabajadores,			//Arreglo con los pid 
-	arregloPipes **arreglo_pipes,   //Arreglo de pipes para entrada
+	sindicato *arrTrab,
 	int *fdInPadre					//Pipe de salida para comunicar con el padre
-	)
+)
 {	
 	/*Enteros*/
 	int i;						//Iterador auxiliar
@@ -69,8 +67,8 @@ void trabajar(
 
 	//Busqueda del pipe adecuado para el pid del trabajador actual
 	childpid = getpid();	
-    for (i=0;i<n_procesos;i++){
-    	if (pidTrabajadores[i]==childpid) fd_proc = arreglo_pipes[i]->fd;
+    for (i=0;i<arrTrab->tam;i++){
+    	if (getPidN(arrTrab,i)==childpid) fd_proc = getPipeN(arrTrab,i);
     }
 
     close(fd_proc[WRITE]);  //Se cierra el extremo write para leer del padre
@@ -79,7 +77,7 @@ void trabajar(
 	while(1){
 		//Limpiar string y leer directorio a trabajar
 		dirTransicional[0] = '\0';
-		status = read(fd_proc[0], dirTransicional, 255 * sizeof(char));
+		status = read(fd_proc[READ], dirTransicional, 255 * sizeof(char));
 		if(status == -1){
 			perror("Error de lectura:");
 			exit(1);
@@ -93,10 +91,10 @@ void trabajar(
 		while(1){printf("Hay algo por recorrer\n");}
 
 		//Escribir al padre en formato fijo
-		status  = write(fdInPadre,&childpid  , sizeof(int)); //Entero que realizo la llamada
-		status  = write(fdInPadre,&numBloques, sizeof(int)); //Bloques
-		status += write(fdInPadre,&numLinks  , sizeof(int)); //Links
-		status += write(fdInPadre,salida     , sizeof(char)*strlen(salida)); //Strings recorridos
+		status  = write(fdInPadre[WRITE],&childpid  , sizeof(int)); //Entero que realizo la llamada
+		status  = write(fdInPadre[WRITE],&numBloques, sizeof(int)); //Bloques
+		status += write(fdInPadre[WRITE],&numLinks  , sizeof(int)); //Links
+		status += write(fdInPadre[WRITE],salida     , sizeof(char)*strlen(salida)); //Strings recorridos
 		
 		//Libera la cola
 		eliminarCola(dirPorRecorrer);
@@ -142,6 +140,7 @@ int main(int argc, char const *argv[]){
 	colaDir *noProcesados;
 
 	arregloPipes **arreglo_pipes;
+	sindicato *arrTrab;
 	int fdInPadre[2];
 
 
@@ -296,22 +295,26 @@ int main(int argc, char const *argv[]){
 
 
 	//Arreglo de pipes de comunicacion de padres a hijos 
-	arreglo_pipes = (arregloPipes**) malloc(sizeof(arregloPipes*) * n_procesos);
+	
+	//arreglo_pipes = (arregloPipes**) malloc(sizeof(arregloPipes*) * n_procesos);
 	//Pipe de hijos al proceso master
+	arrTrab = (sindicato *) malloc(sizeof(sindicato));
+	crearSindicato(arrTrab,n_procesos);
+
 	pipe(fdInPadre);
 
 	//Inicializacion de arreglo booleano de trabajadores libres
-	trabLibres 		= (int *) malloc(sizeof(int) * n_procesos);
-	for (i = 0; i < n_procesos; i++) trabLibres[i] = 1;
+	//trabLibres 		= (int *) malloc(sizeof(int) * n_procesos);
+	//for (i = 0; i < n_procesos; i++) trabLibres[i] = 1;
 
 	//Init de pid de trabajadores
-	pidTrabajadores = (int *) malloc(sizeof(int) * n_procesos);
+	//pidTrabajadores = (int *) malloc(sizeof(int) * n_procesos);
 	
 
 	// Creamos tantos pipes y procesos como indique el nivel de concurrencia
 	for (i=0;i<n_procesos;i++){
-		arreglo_pipes[i] = (arregloPipes*) malloc(sizeof(arregloPipes));
-		pipe(arreglo_pipes[i]->fd);
+		//arreglo_pipes[i] = (arregloPipes*) malloc(sizeof(arregloPipes));
+		//pipe(arreglo_pipes[i]->fd);
         
         if((trabajadores = fork()) == -1)
         {
@@ -324,7 +327,7 @@ int main(int argc, char const *argv[]){
         	/*Almacenamiento del pid del ultimo hijo*/
         	pidTrabajadores[i] = trabajadores;
             /* Parent process closes up output side of pipe */
-            close(arreglo_pipes[i]->fd[1]);
+            close(arrTrab->trabajadores[i]->fd[WRITE]);
         }
     }
 
@@ -392,23 +395,26 @@ int main(int argc, char const *argv[]){
 					strcat(dirTransicional,"/"			 );
 					strcat(dirTransicional,entry->d_name );
 
-					for (i = 0; i < n_procesos; i++){
+					//for (i = 0; i < n_procesos; i++){
 						//Revisamos si hay algun proceso libre y le asignamos el dir
-						if(trabLibres[i]){
-							trabLibres[i] = 0;
+						
+						//if(trabLibres[i]){
+						//	trabLibres[i] = 0;
 
 							/*Escribir en su pipe MARIIIII*/
-							write(arreglo_pipes[i]->fd[1],dirTransicional,sizeof(dirTransicional));
+						//	write(sindicato->trabajadores[i]->fd[1],dirTransicional,sizeof(dirTransicional));
 							//free(dirTransicional)
-							break;
-						}
+						//	break;
+						//}
 
 						//Si no se encuentra encolamos el directorio a la cola de
 						//no procesados
-						if((i == n_procesos) && !(trabLibres[i])){
-							agregarEnCola(noProcesados,dirTransicional);
-						}
-					}
+						//if((i == n_procesos) && !(trabLibres[i])){
+							
+						//}
+					//}
+
+					agregarEnCola(noProcesados,dirTransicional);
 					dirTransicional = NULL; //Apuntador tomado por un proceso o cola
 
 				}
@@ -435,18 +441,18 @@ int main(int argc, char const *argv[]){
     // Recorro el arreglo de pid para encontrar el pipe correspondiente y pasarlo como parametro al
     // procedimiento trabajar, para poder cerrar/abrir el extremo correspondiente
 
-    else trabajar(n_procesos,pidTrabajadores,arreglo_pipes,fdInPadre); 
+    else trabajar(arrTrab,fdInPadre); 
 
     /*Luego de finalizar los trabajos, finalizamos a cada hijo*/
     for (i = 0; i < n_procesos; i++){
-    	status = kill(pidTrabajadores[i],SIGKILL);
+    	status = kill(getPidN(arrTrab,i),SIGKILL);
     	if(status == -1){
     		perror("Error eliminando proc: ");
     		exit(1);
     	}
     }
 
-    eliminarLista(noProcesados);
+    eliminarCola(noProcesados);
     free(noProcesados);
 
     //Eliminar los strings
