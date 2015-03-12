@@ -13,6 +13,17 @@
 #define READ  0
 #define WRITE 1
 
+#define SOFT 1
+#define DIR  2
+#define ARCH 3
+
+int tipoArchivo(){
+	if (S_ISLNK(fileStat.st_mode)) return 1
+	if (S_ISDIR(fileStat.st_mode)) return 2 
+	else return 3
+
+}
+
 void entrada_invalida(){
 	printf("Entrada invalida.\n");
 	printf("Debe ingresar argumentos validos.\n");
@@ -55,7 +66,7 @@ void trabajar(int n_procesos,int *pidTrabajadores,arregloPipes **arreglo_pipes,i
 		status = read(fd_proc[0], dirTransicional, 255);
 		if(status == -1){
 			perror("Error de lectura:");
-			exit(1)
+			exit(1);
 		}
 		//trabajar directorio
 
@@ -65,7 +76,7 @@ void trabajar(int n_procesos,int *pidTrabajadores,arregloPipes **arreglo_pipes,i
 		status = write(fdInPadre, , strlen());
 		if(status == -1){
 			perror("Error de escritura:");
-			exit(1)
+			exit(1);
 		}
 		
 		//envia senal de finalizacion y luego pausa
@@ -291,9 +302,6 @@ int main(int argc, char const *argv[]){
 				printf("%s\n",d_name);
 
 				
-				printf("**TERMINA SUBDIRECTORIO**");
-				printf("\n");
-			
 				/*Creacion del string para pasar a los hijos*/
 				dirTransicional    = (char *) malloc(sizeof(char) * 255);
 				dirTransicional[0] = '\0';
@@ -360,35 +368,12 @@ int main(int argc, char const *argv[]){
             exit(1);
         }
 
-        if(trabajadores == 0){	
-        	/*INICIALIZACION DE CHILD*/
-            /* Child process closes up input side of pipe */
-            close(arreglo_pipes[i]->fd[0]);
-
-            /* Send "string" through the output side of pipe */
-            
-            // ABAJITO ESTA EXPLICADO POR QUE ESTA COMENTADO AUN
-
-            //write(fd[1], string, (strlen(string)+1));
-            
-            // AQUI ARRIBA EN STRING NO ESTOY CLARA CUAL NOMBRE 
-            //DE ARCHIVO VA, O SI ES LOS DATOS DE SALIDA
-
-            //Set libre a true
-            break;
-        }
+        if(trabajadores == 0) break;
         else{
         	/*Almacenamiento del pid del ultimo hijo*/
         	pidTrabajadores[i] = trabajadores;
             /* Parent process closes up output side of pipe */
             close(arreglo_pipes[i]->fd[1]);
-
-            /* Read in a string from the pipe */
-            
-            // LOS DE ABAJO ESTAN COMENTADOS PARA QUE NO EXPLOTE, HAY QUE PONER 
-            // BIEN EL STRING DE ARRIBA
-                //nbytes = read(fd[0], readbuffer, sizeof(readbuffer));
-                //printf("Received string: %s", readbuffer);
         }
     }
 
@@ -398,6 +383,10 @@ int main(int argc, char const *argv[]){
 
         //Cerramos el pipe para realizar lectura
         close(fdInPadre[WRITE]);
+        
+
+
+
         //recorrer directorio
         if ((direct = opendir("src")) == NULL){
     		perror("opendir");
@@ -417,9 +406,7 @@ int main(int argc, char const *argv[]){
     
     	printf("\nDirectory stream is now closed\n");
 
-    	/*
-    		Al encontrar el directorio buscar un 
-    	*/
+    	
     }
     //Los hijos ejecutan la funcion ciclica esperar/trabajar/enviar senal
 
