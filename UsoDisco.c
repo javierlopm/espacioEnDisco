@@ -29,6 +29,7 @@ void trabajar(int n_procesos,int *pidTrabajadores,arregloPipes **arreglo_pipes){
 	int i,j;
 	int childpid;
 	int fd_proc[2];				//Pipe de un proceso particular (hijo)
+	char *dirTransicional;
 	childpid = getpid();
     for (i=0;i<n_procesos;i++){
     	if (pidTrabajadores[i]==childpid)
@@ -46,7 +47,7 @@ void trabajar(int n_procesos,int *pidTrabajadores,arregloPipes **arreglo_pipes){
 		//trabajar directorio
 
 		//escribe al padre
-		//nbytes = read(fd_proc[0], readbuffer, sizeof(readbuffer));
+		nbytes = read(fd_proc[0], dirTransicional, sizeof(dirTransicional));
 		//envia senal de finalizacion y luego pausa
 	}
 
