@@ -11,7 +11,7 @@
 #include "colaDirectorios.h"
 #include "trabajadores.h"
 
-
+ 
 /*Constantes read/write de pipes*/
 #define READ  0
 #define WRITE 1
