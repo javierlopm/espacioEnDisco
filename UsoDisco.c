@@ -79,7 +79,11 @@ void trabajar(
 	//Busqueda del pipe adecuado para el pid del trabajador actual
 	childpid = getpid();	
     for (i=0;i<arrTrab->tam;i++){
-    	if (getPidN(arrTrab,i)==childpid) fd_proc = getPipeN(arrTrab,i);
+    	printf("Este es el pid que estoy verificando %d\n",getPidN(arrTrab,i));
+    	if (getPidN(arrTrab,i)==childpid){
+    		printf("Found it no joda pid %d, i=%d\n",childpid,i);
+    		fd_proc = getPipeN(arrTrab,i);
+    	}
     }
 
     close(fd_proc[WRITE]);  //Se cierra el extremo write para leer del padre
@@ -88,7 +92,8 @@ void trabajar(
 	while(1){
 		//Limpiar string y leer directorio a trabajar
 		dirTransicional[0] = '\0';
-		status = read(fd_proc[READ], dirTransicional, 255 * sizeof(char));
+		printf("FILE DESCRIPTOR: %d\n",fd_proc[READ]);
+		status = read(fd_proc[READ], dirTransicional, strlen(dirTransicional)+1);
 		if(status == -1){
 			perror("Error de lectura:");
 			exit(1);
@@ -146,13 +151,7 @@ int main(int argc, char const *argv[]){
 	DIR           *d;			 // apuntador auxiliar
 	FILE 		  *salida;		 // salida del programa
 	colaDir 	  *noProcesados; // cola de directorios a procesar por hijos
-	sindicato     *arrTrab;	     // estructura para informacion de trabajadores
-	
-	
-	
-
-
-	
+	sindicato     *arrTrab;	     // estructura para informacion de trabajadore
 	struct stat fileStat;       // para obtener la info de los archivos
 
 	n_procesos = 1;				// si no se ingresa el numero de procesos, por defecto es 1 
@@ -196,7 +195,6 @@ int main(int argc, char const *argv[]){
 				perror("opendir: ");
 				exit(0);
 			}
-
 		}
 		// Si los comandos ejecutados son distintos a -h o salida
 	}
@@ -256,8 +254,6 @@ int main(int argc, char const *argv[]){
 	// ************************************************
 
 
-
-
 	/*Inicializacion de la informacion de los trabajadores -------------------*/
 
 
@@ -308,16 +304,6 @@ int main(int argc, char const *argv[]){
         close(fdInPadre[WRITE]);
         
 
-
-
-        //recorrer directorio
-        /*
-        if ((d = opendir("src")) == NULL){
-    		perror("opendir");
-    		return -1;
-    	}
-    	*/
-    
     	printf("Directory stream is now open\n");
     
     
@@ -374,6 +360,7 @@ int main(int argc, char const *argv[]){
     		exit(1);
     	}
     }
+
 
     eliminarCola(noProcesados);
     free(noProcesados);
