@@ -72,7 +72,7 @@ int empty(colaDir *aux){
     return (aux->tam == 0);
 }
 
-void eliminarLista(colaDir *aux){
+void eliminarCola(colaDir *aux){
     caja *iterador,*anterior;
 
     iterador = aux->primero;
