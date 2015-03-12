@@ -14,8 +14,8 @@ struct sindicato
     trabajador **trabajadores;
 };
 
-void crearSindicato(sindicato *entrada, int tam);
-int  estaLibre(sindicato *entrada);
-int *getPipeN(sindicato *entrada,int n);
-int  getPidN(sindicato *entrada,int n);
+void crearSindicato (sindicato *entrada, int tam);
+int  estaLibre      (sindicato *entrada);
+int *getPipeN       (sindicato *entrada,int n);
+int  getPidN        (sindicato *entrada,int n);
 void abolirSindicato(sindicato *entrada);
