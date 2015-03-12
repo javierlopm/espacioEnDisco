@@ -68,9 +68,12 @@ int main(int argc, char const *argv[]){
 	pid_t   trabajadores;		// id de los procesos trabajadores		
 	char* nombre_entrada;		// apuntador a la ruta que se obtiene por input
 	char arch_salida[15];   	// nombre del archivo de salida
+	int info_archivo;           // guarda la info del archivo que da stat
 	
 	DIR *direct;	// apuntador al directorio
 	struct dirent *archivo;		// estructura para el manejo de archivos
+	DIR *subdirect;	// apuntador al directorio
+	struct dirent *subarchivo;		// estructura para el manejo de archivos
 	size_t t = 1;				// iterador para recorrer los directorios
 	FILE *salida;				// apuntador al archivo que obtendra la salida del programa
 	
@@ -204,10 +207,10 @@ int main(int argc, char const *argv[]){
 	//   ******   OTRA MANERA   ******
 	
 	DIR * d;
-
+	d = direct;
     /* Open the directory specified by "dir_name". */
 
-    d = opendir (".");
+    //d = opendir (".");
 
     /* Check it was opened. */
     if (! d) {
@@ -245,8 +248,53 @@ int main(int argc, char const *argv[]){
 			printf( (S_ISDIR(fileStat.st_mode)) ? "*directorio*\n" : "*archivo*\n");
 			
 
-			if ((S_ISDIR(fileStat.st_mode)) )
+			if ((S_ISDIR(fileStat.st_mode)) ){
 				printf("SOY DIRECTORIO\n");
+				printf("Y ESTE ES MI NOMBRE**: ");
+				printf("%s\n",d_name);
+
+				subdirect = opendir(entry->d_name);
+				printf("**EMPIEZA SUBDIRECTORIO**\n");
+				if (! subdirect) {
+			        fprintf (stderr, "Cannot open directory : %s\n",
+			                  strerror (errno));
+			        exit (EXIT_FAILURE);
+			      }
+
+			    while (1) {
+			        struct dirent * subentry;
+			        const char * subd_name;
+
+			        /* "Readdir" gets subsequent entries from "d". */
+			        subentry = readdir (subdirect);
+			        if (! subentry) {
+			            /* There are no more entries in this directory, so break
+			               out of the while loop. */
+			            break;
+			        }
+			        //printf("**ESTE ES UN DIRECTORIO: ");
+			        subd_name = subentry->d_name;
+			        /* Print the name of the file and directory. */
+			
+					printf ("%s\n", subd_name);
+					printf ("%s\n", subentry->d_name);
+
+					info_archivo=lstat(subentry->d_name,&fileStat);    // aqui asigno el stat 
+			        		
+		        	printf("Num bloques: %ld\n",fileStat.st_blocks);
+		        	
+		        	
+		        	printf("The file %s a symbolic link\n", (S_ISLNK(fileStat.st_mode)) ? "is" : "is not");
+
+		        	//Dice si es archivo o directorio
+					printf( (S_ISDIR(fileStat.st_mode)) ? "*directorio*\n" : "*archivo*\n");
+					
+				}
+				printf("**TERMINA SUBDIRECTORIO**");
+				printf("\n");
+			}
+
+
 			else
 				printf("NO SOY DIRECTORIO\n");
 			printf("\n");
