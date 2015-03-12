@@ -10,6 +10,9 @@
 #include <signal.h> 
 #include "colaDirectorios.h"
 
+#define READ  0
+#define WRITE 1
+
 void entrada_invalida(){
 	printf("Entrada invalida.\n");
 	printf("Debe ingresar argumentos validos.\n");
@@ -24,30 +27,45 @@ typedef struct arregloPipes
 } arregloPipes;
 
 
-void trabajar(int n_procesos,int *pidTrabajadores,arregloPipes **arreglo_pipes){
+void trabajar(int n_procesos,int *pidTrabajadores,arregloPipes **arreglo_pipes,int *fdInPadre){
 	int nbytes;
 	int i,j;
 	int childpid;
-	int fd_proc[2];				//Pipe de un proceso particular (hijo)
-	char *dirTransicional;
-	childpid = getpid();
+	int *fd_proc;				//Pipe de un proceso particular (hijo)
+	char dirTransicional[255];
+	char *salida;
+	char *arcActual;
+	char *aux;
+	int status;
+
+	childpid = getpid();      //Id del proceso
+
+	
+
     for (i=0;i<n_procesos;i++){
-    	if (pidTrabajadores[i]==childpid)
-    		for(j=0;j<2;j++){
-    			fd_proc[j] = arreglo_pipes[i]->fd[j];
-    		}
+    	if (pidTrabajadores[i]==childpid) fd_proc = arreglo_pipes[i]->fd;
     }
 
-	while(1){
-		//USAR SIGSUSPEND
+    close(fd_proc[WRITE]);
+    close(fdInPadre[READ]);
 
+	while(1){
 		//cierro el extremo de escritura fd[1]
 		//leer de pipe
-
+		status = read(fd_proc[0], dirTransicional, 255);
+		if(status == -1){
+			perror("Error de lectura:");
+			exit(1)
+		}
 		//trabajar directorio
 
 		//escribe al padre
-		nbytes = read(fd_proc[0], dirTransicional, sizeof(dirTransicional));
+		status = write(fdInPadre, , strlen());
+		if(status == -1){
+			perror("Error de escritura:");
+			exit(1)
+		}
+		
 		//envia senal de finalizacion y luego pausa
 	}
 
@@ -60,6 +78,7 @@ void trabajar(int n_procesos,int *pidTrabajadores,arregloPipes **arreglo_pipes){
 
 int main(int argc, char const *argv[]){
 	
+	/*Enteros*/
 	int n_procesos;    			//numero de procesos que realizaran el trabajo
 	int i;						//Variable auxiliar de iterador
 	int *trabLibres;			//Arreglo booleano de 
@@ -67,19 +86,27 @@ int main(int argc, char const *argv[]){
 	int status;					//Variable auxiliar para status de procesos
 	pid_t   trabajadores;		// id de los procesos trabajadores		
 	int info_archivo;           // guarda la info del archivo que da stat
+	
+	/*Strings*/
 	char nombre_entrada[255];		// apuntador a la ruta que se obtiene por input
 	char arch_salida[255];   	// nombre del archivo de salida
 	char *dirTransicional;      // directorio auxiliar para las colas
-
+	char *aux;
+	DIR  *d;
 	
+	/*stuff*/
 	DIR *direct;	// apuntador al directorio
 	struct dirent *archivo;		// estructura para el manejo de archivos
 	DIR *subdirect;	// apuntador al directorio
 	struct dirent *subarchivo;		// estructura para el manejo de archivos
 	size_t t = 1;				// iterador para recorrer los directorios
 	FILE *salida;				// apuntador al archivo que obtendra la salida del programa
-	
+	colaDir *noProcesados;
+
 	arregloPipes **arreglo_pipes;
+	int fdInPadre[2];
+
+
 	
 	struct stat fileStat;       // para obtener la info de los archivos
 
@@ -88,7 +115,7 @@ int main(int argc, char const *argv[]){
 	// Numero de argumentos invalido
 	if (argc < 2 | argc == 3 | argc == 5 | argc > 6) entrada_invalida();	
 	
-	/*Inicio de la lectura de argumentos  ------------------------------------*/
+	/*Inicio de la lectura de argumentos -------------------------------------*/
 	if (argc == 2){
 		// Manual del programa
 		if (strcmp(argv[1],"-h")==0){
@@ -118,8 +145,8 @@ int main(int argc, char const *argv[]){
 
 			strcpy(arch_salida,argv[1]);
 			n_procesos = 1;
-			//nombre_entrada = getcwd(NULL,0);
-			nombre_entrada = getcwd(NULL,0);
+			aux = getcwd(NULL,0);
+			strcpy(nombre_entrada,aux);
 			// Si el directorio es vacio
 			if ((direct = opendir(nombre_entrada)) == NULL){
 				perror("opendir: ");
@@ -137,7 +164,8 @@ int main(int argc, char const *argv[]){
 
 			n_procesos = atoi(argv[2]);
 			//nombre_entrada = getcwd(NULL,0);
-			nombre_entrada = getcwd(NULL,0);
+			aux = getcwd(NULL,0);
+			strcpy(nombre_entrada,aux);
 			// Si el directorio es vacio
 			if ((direct = opendir(nombre_entrada)) == NULL){
 				perror("opendir: ");
@@ -208,7 +236,7 @@ int main(int argc, char const *argv[]){
 
 	//   ******   OTRA MANERA   ******
 	
-	DIR * d;
+	
 	d = direct;
     /* Open the directory specified by "dir_name". */
 
@@ -222,7 +250,7 @@ int main(int argc, char const *argv[]){
     }
     while (1) {
         struct dirent * entry;
-        const char * d_name;
+        char * d_name;
 
         /* "Readdir" gets subsequent entries from "d". */
         entry = readdir (d);
@@ -234,9 +262,9 @@ int main(int argc, char const *argv[]){
         //printf("**ESTE ES UN DIRECTORIO: ");
         d_name = entry->d_name;
         /* Print the name of the file and directory. */
-	printf ("%s\n", d_name);
+		printf ("%s\n", d_name);
 
-	if(lstat(entry->d_name,&fileStat) < 0)    // aqui asigno el stat 
+		if(lstat(entry->d_name,&fileStat) < 0)    // aqui asigno el stat 
         		return 1;
         	printf("Num bloques: %ld\n",fileStat.st_blocks);
         	
@@ -250,49 +278,17 @@ int main(int argc, char const *argv[]){
 			printf( (S_ISDIR(fileStat.st_mode)) ? "*directorio*\n" : "*archivo*\n");
 			
 
-			if ((S_ISDIR(fileStat.st_mode)) ){
+			if (
+				S_ISDIR(fileStat.st_mode) 		 && 
+				(strcmp(entry->d_name,"." )!= 0) && //Ignoramos el dir actual
+				(strcmp(entry->d_name,"..")!= 0)    //y su padre
+			   ){
 				printf("SOY DIRECTORIO\n");
 
 				printf("Y ESTE ES MI NOMBRE**: ");
 				printf("%s\n",d_name);
 
-				subdirect = opendir(entry->d_name);
-				printf("**EMPIEZA SUBDIRECTORIO**\n");
-				if (! subdirect) {
-			        fprintf (stderr, "Cannot open directory : %s\n",
-			                  strerror (errno));
-			        exit (EXIT_FAILURE);
-			      }
-
-			    while (1) {
-			        struct dirent * subentry;
-			        const char * subd_name;
-
-			        /* "Readdir" gets subsequent entries from "d". */
-			        subentry = readdir (subdirect);
-			        if (! subentry) {
-			            /* There are no more entries in this directory, so break
-			               out of the while loop. */
-			            break;
-			        }
-			        //printf("**ESTE ES UN DIRECTORIO: ");
-			        subd_name = subentry->d_name;
-			        /* Print the name of the file and directory. */
-			
-					printf ("%s\n", subd_name);
-					printf ("%s\n", subentry->d_name);
-
-					info_archivo=lstat(subentry->d_name,&fileStat);    // aqui asigno el stat 
-			        		
-		        	printf("Num bloques: %ld\n",fileStat.st_blocks);
-		        	
-		        	
-		        	printf("The file %s a symbolic link\n", (S_ISLNK(fileStat.st_mode)) ? "is" : "is not");
-
-		        	//Dice si es archivo o directorio
-					printf( (S_ISDIR(fileStat.st_mode)) ? "*directorio*\n" : "*archivo*\n");
-					
-				}
+				
 				printf("**TERMINA SUBDIRECTORIO**");
 				printf("\n");
 			
@@ -317,7 +313,7 @@ int main(int argc, char const *argv[]){
 					//Si no se encuentra encolamos el directorio a la cola de
 					//no procesados
 					if((i == n_procesos) && !(trabLibres[i])){
-						noProcesados.encolar(dirTransicional);
+						agregarEnCola(noProcesados,dirTransicional);
 					}
 				}
 				dirTransicional = NULL; //Apuntador tomado por un proceso o cola
@@ -335,19 +331,19 @@ int main(int argc, char const *argv[]){
 
 
 
-	/*Inicio de la definicionde pipes---  ------------------------------------*/
-
-	// Arreglo de pipes de acuerdo al numero de procesos
-	//struct arregloPipes* arreglo_pipes;
+	/*Inicializacion de la informacion de los trabajadores -------------------*/
 
 
+	//Arreglo de pipes de comunicacion de padres a hijos 
 	arreglo_pipes = (arregloPipes**) malloc(sizeof(arregloPipes*) * n_procesos);
-	
-	/*Inicializacion de arreglo booleano de trabajadores libres*/
+	//Pipe de hijos al proceso master
+	pipe(fdInPadre);
+
+	//Inicializacion de arreglo booleano de trabajadores libres
 	trabLibres 		= (int *) malloc(sizeof(int) * n_procesos);
 	for (i = 0; i < n_procesos; i++) trabLibres[i] = 1;
 
-	/*Init de pid de trabajadores*/
+	//Init de pid de trabajadores
 	pidTrabajadores = (int *) malloc(sizeof(int) * n_procesos);
 	
 
@@ -382,7 +378,6 @@ int main(int argc, char const *argv[]){
         else{
         	/*Almacenamiento del pid del ultimo hijo*/
         	pidTrabajadores[i] = trabajadores;
-
             /* Parent process closes up output side of pipe */
             close(arreglo_pipes[i]->fd[1]);
 
@@ -396,6 +391,11 @@ int main(int argc, char const *argv[]){
     }
 
     if(trabajadores != 0){	//El padre recorre directorios
+        //Reserva de espacio para la cola de procesos a trabajar
+        noProcesados = (colaDir *) malloc(sizeof(colaDir));
+
+        //Cerramos el pipe para realizar lectura
+        close(fdInPadre[WRITE]);
         //recorrer directorio
         if ((direct = opendir("src")) == NULL){
     		perror("opendir");
@@ -425,7 +425,7 @@ int main(int argc, char const *argv[]){
     // Recorro el arreglo de pid para encontrar el pipe correspondiente y pasarlo como parametro al
     // procedimiento trabajar, para poder cerrar/abrir el extremo correspondiente
 
-    else trabajar(n_procesos,pidTrabajadores,arreglo_pipes); 
+    else trabajar(n_procesos,pidTrabajadores,arreglo_pipes,fdInPadre); 
 
     /*Luego de finalizar los trabajos, finalizamos a cada hijo*/
     for (i = 0; i < n_procesos; i++){
@@ -435,6 +435,9 @@ int main(int argc, char const *argv[]){
     		exit(1);
     	}
     }
+
+    eliminarLista(noProcesados);
+    free(noProcesados);
 
     //Eliminar los strings
     return 0;
