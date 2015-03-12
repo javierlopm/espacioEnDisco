@@ -59,6 +59,8 @@ void trabajar(int n_procesos,int *pidTrabajadores,arregloPipes **arreglo_pipes,i
 		}
 		//trabajar directorio
 
+		while(1){printf("Hay algo por recorrer\n");}
+
 		//escribe al padre
 		status = write(fdInPadre, , strlen());
 		if(status == -1){
