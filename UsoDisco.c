@@ -42,6 +42,17 @@ typedef struct arregloPipes
 } arregloPipes;
 
 
+/*Usar para los hijos
+dirTransicional    = (char *) malloc(sizeof(char) * 255);
+dirTransicional[0] = '\0';
+strcpy(dirTransicional,nombre_entrada); //Revisar si termina en /
+strcat(dirTransicional,"/"			 );
+strcat(dirTransicional,entry->d_name );
+
+agregarEnCola(noProcesados,dirTransicional);
+dirTransicional = NULL; //Apuntador tomado por un proceso o cola
+*/
+
 void trabajar(
 	sindicato *arrTrab,
 	int *fdInPadre					//Pipe de salida para comunicar con el padre
@@ -119,29 +130,26 @@ int main(int argc, char const *argv[]){
 	int status;					//Variable auxiliar para status de procesos
 	pid_t   trabajadores;		// id de los procesos trabajadores		
 	int info_archivo;           // guarda la info del archivo que da stat
+	int numLinks   = 0;         //cantidad de enlaces logicos
+	int fdInPadre[2];           // pipe de escritura de hijos al padre
 	
 	/*Strings*/
 	char nombre_entrada[255];	// apuntador a la ruta que se obtiene por input
 	char arch_salida[255];   	// nombre del archivo de salida
 	char *dirTransicional;      // directorio auxiliar para las colas
 	char *aux;
-	
-	struct dirent *archivo;	
-	DIR  *d;
-	
-	/*stuff*/
-	//DIR *direct;	// apuntador al directorio
-	// estructura para el manejo de archivos
-	struct dirent *subarchivo;
-	DIR *subdirect;	// apuntador al directorio
-			// estructura para el manejo de archivos
-	size_t t = 1;				// iterador para recorrer los directorios
-	FILE *salida;				// apuntador al archivo que obtendra la salida del programa
-	colaDir *noProcesados;
+	char * d_name;
 
-	arregloPipes **arreglo_pipes;
-	sindicato *arrTrab;
-	int fdInPadre[2];
+	/*Estructuras*/
+	struct dirent *archivo;		 // estructuras para el manejo de archivos
+	struct dirent *entry;
+	DIR           *d;			 // apuntador auxiliar
+	FILE 		  *salida;		 // salida del programa
+	colaDir 	  *noProcesados; // cola de directorios a procesar por hijos
+	sindicato     *arrTrab;	     // estructura para informacion de trabajadores
+	
+	
+	
 
 
 	
@@ -152,6 +160,7 @@ int main(int argc, char const *argv[]){
 	// Numero de argumentos invalido
 	if (argc < 2 | argc == 3 | argc == 5 | argc > 6) entrada_invalida();	
 	
+
 	/*Inicio de la lectura de argumentos -------------------------------------*/
 	if (argc == 2){
 		// Manual del programa
@@ -177,14 +186,12 @@ int main(int argc, char const *argv[]){
 			printf("\n");
 			exit(0);
 		}
-		// Solo se indica el nombre del archivo de salida
-		else if (strcmp(argv[1],"salida")==0){    //!!!!!!!!!No hay que comparar con el string salida, hay que ver si es diferente a -h y luego si el archivo existe
+		else{  // Solo se indica el nombre del archivo de salida  
 
-			strcpy(arch_salida,argv[1]);
 			n_procesos = 1;
-			aux = getcwd(NULL,0);
-			strcpy(nombre_entrada,aux);
-			// Si el directorio es vacio
+			strcpy(nombre_entrada,".");
+			
+			// Si el directorio es vacio error
 			if ((d = opendir(nombre_entrada)) == NULL){
 				perror("opendir: ");
 				exit(0);
@@ -192,28 +199,18 @@ int main(int argc, char const *argv[]){
 
 		}
 		// Si los comandos ejecutados son distintos a -h o salida
-		else entrada_invalida();
-
 	}
-	if (argc == 4){
+	else if (argc == 4){
 
 		if (strcmp(argv[1],"-n") == 0){
 
 			n_procesos = atoi(argv[2]);
-			//nombre_entrada = getcwd(NULL,0);
-			aux = getcwd(NULL,0);
-			strcpy(nombre_entrada,aux);
-			// Si el directorio es vacio
-			if ((d = opendir(nombre_entrada)) == NULL){
-				perror("opendir: ");
-				exit(0);
-			}
+			strcpy(nombre_entrada,".");
 		}
 
 		else if (strcmp(argv[1],"-d") == 0){
 
 			strcpy(nombre_entrada,argv[2]);
-			// Si el directorio es vacio
 			n_procesos = 1;
 		}
 		else entrada_invalida();
@@ -222,11 +219,8 @@ int main(int argc, char const *argv[]){
 			perror("opendir: ");
 			exit(0);
 		}
-
-		strcpy(arch_salida,argv[3]);
-
 	}
-	if (argc == 6){
+	else if (argc == 6){
 
 		if ((strcmp(argv[1], "-n") == 0) && (strcmp(argv[3], "-d") == 0)) {
 			
@@ -243,43 +237,16 @@ int main(int argc, char const *argv[]){
 		else entrada_invalida(); 
 
 		//Extraccion de la salida, comun a ambos formatos
-		strcpy(arch_salida,argv[5]);
 
 		if ((d = opendir(nombre_entrada)) == NULL){
 			// Si el directorio es vacio
 			perror("opendir: ");
 			exit(0);
 		}
-
 	}
 
-	/*
-	// Este caso solo para el directorio actual (cuando no hay -d)
-	direct = opendir(".");
-	if (direct){
-		while ((archivo= readdir(direct))){
-			printf("%s\n",archivo->d_name);
-			
-			// Imprime el numero de bloques para los archivos encontrados en el directorio
-			// En el stat esta la info necesaria para los archivos
-			
-			if(stat(archivo->d_name,&fileStat) < 0)    // aqui asigno el stat 
-        		return 1;
-        	printf("Num bloques: %ld\n",fileStat.st_blocks);
-		}
-		closedir(direct);
-	}
-	*/
+	salida = fopen(argv[argc-1],"w");
 
-	//   ******   OTRA MANERA   ******
-	
-	
-	//d = direct;
-    /* Open the directory specified by "dir_name". */
-
-    //d = opendir (".");
-
-    /* Check it was opened. */
     if (! d) {
         fprintf (stderr, "Cannot open directory : %s\n",
                   strerror (errno));
@@ -325,7 +292,7 @@ int main(int argc, char const *argv[]){
         if(trabajadores == 0) break;
         else{
         	/*Almacenamiento del pid del ultimo hijo*/
-        	pidTrabajadores[i] = trabajadores;
+        	arrTrab->trabajadores[i]->pid = trabajadores;
             /* Parent process closes up output side of pipe */
             close(arrTrab->trabajadores[i]->fd[WRITE]);
         }
@@ -344,84 +311,40 @@ int main(int argc, char const *argv[]){
 
 
         //recorrer directorio
+        /*
         if ((d = opendir("src")) == NULL){
     		perror("opendir");
     		return -1;
     	}
+    	*/
     
     	printf("Directory stream is now open\n");
     
     
-    	struct dirent * entry;
-	    char * d_name;
+    	
         //SE SUPONE QUE DEBERIA RECORRER EL DIRECTORIO
         while((entry=readdir(d))!=NULL){
-
-	        
-	        //printf("**ESTE ES UN DIRECTORIO: ");
+	       
 	        d_name = entry->d_name;
-	        /* Print the name of the file and directory. */
-			printf ("%s\n", d_name);
-
-			if(lstat(entry->d_name,&fileStat) < 0)    // aqui asigno el stat 
-	        		return 1;
-	        	printf("Num bloques: %ld\n",fileStat.st_blocks);
-	        	
-	        	switch (fileStat.st_mode & S_IFMT) {
-	        		
-	        	case S_IFLNK:  printf("symlink\n"); 
-	        }
-	        	printf("The file %s a symbolic link\n", (S_ISLNK(fileStat.st_mode)) ? "is" : "is not");
-
-	        	//Dice si es archivo o directorio
-				printf( (S_ISDIR(fileStat.st_mode)) ? "*directorio*\n" : "*archivo*\n");
+			if(lstat(entry->d_name,&fileStat) < 0) return 1;
 				
-
-				if (
-					S_ISDIR(fileStat.st_mode) 		 && 
-					(strcmp(entry->d_name,"." )!= 0) && //Ignoramos el dir actual
-					(strcmp(entry->d_name,"..")!= 0)    //y su padre
-				   ){
-					printf("SOY DIRECTORIO\n");
-
-					printf("Y ESTE ES MI NOMBRE**: ");
-					printf("%s\n",d_name);
-
-					
-					/*Creacion del string para pasar a los hijos*/
-					dirTransicional    = (char *) malloc(sizeof(char) * 255);
-					dirTransicional[0] = '\0';
-					strcpy(dirTransicional,nombre_entrada); //Revisar si termina en /
-					strcat(dirTransicional,"/"			 );
-					strcat(dirTransicional,entry->d_name );
-
-					//for (i = 0; i < n_procesos; i++){
-						//Revisamos si hay algun proceso libre y le asignamos el dir
-						
-						//if(trabLibres[i]){
-						//	trabLibres[i] = 0;
-
-							/*Escribir en su pipe MARIIIII*/
-						//	write(sindicato->trabajadores[i]->fd[1],dirTransicional,sizeof(dirTransicional));
-							//free(dirTransicional)
-						//	break;
-						//}
-
-						//Si no se encuentra encolamos el directorio a la cola de
-						//no procesados
-						//if((i == n_procesos) && !(trabLibres[i])){
-							
-						//}
-					//}
-
-					agregarEnCola(noProcesados,dirTransicional);
-					dirTransicional = NULL; //Apuntador tomado por un proceso o cola
-
-				}
-				else
-					printf("NO SOY DIRECTORIO\n");
-
-				printf("\n");
+			switch(tipoArchivo(fileStat)){
+				case ARCH:
+					fprintf(
+							salida,"%ld %s/%s\n",
+							fileStat.st_blocks,nombre_entrada,d_name
+							);
+					break;
+				case SOFT:
+					numLinks += 1;
+					break;
+				case DIRECT:
+					if( 
+						(strcmp(entry->d_name,"." )!= 0) &&
+						(strcmp(entry->d_name,"..")!= 0)
+					  )agregarEnCola(noProcesados,dirTransicional);
+					break;
+			}
 
         }
     		
@@ -454,6 +377,8 @@ int main(int argc, char const *argv[]){
 
     eliminarCola(noProcesados);
     free(noProcesados);
+
+    fclose(salida);
 
     //Eliminar los strings
     return 0;
