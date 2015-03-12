@@ -19,9 +19,9 @@
 #define DIRECT  2
 #define ARCH 3
 
-int tipoArchivo(){
-	if (S_ISLNK(fileStat.st_mode)) return 1;
-	if (S_ISDIR(fileStat.st_mode)) return 2 ;
+int tipoArchivo(struct stat archivo){
+	if (S_ISLNK(archivo.st_mode)) return 1;
+	if (S_ISDIR(archivo.st_mode)) return 2 ;
 	else return 3;
 
 }
@@ -77,7 +77,7 @@ void trabajar(
 	while(1){
 		//Limpiar string y leer directorio a trabajar
 		dirTransicional[0] = '\0';
-		status = read(fd_proc[0], dirTransicional, 255 * sizeof(char));
+		status = read(fd_proc[READ], dirTransicional, 255 * sizeof(char));
 		if(status == -1){
 			perror("Error de lectura:");
 			exit(1);
@@ -125,23 +125,15 @@ int main(int argc, char const *argv[]){
 	char *dirTransicional;      // directorio auxiliar para las colas
 	char *aux;
 	
+	/*stuff*/
 	struct dirent *archivo;	
 	DIR  *d;
-	
-	/*stuff*/
-	//DIR *direct;	// apuntador al directorio
-	// estructura para el manejo de archivos
-	struct dirent *subarchivo;
-	DIR *subdirect;	// apuntador al directorio
-			// estructura para el manejo de archivos
 	size_t t = 1;				// iterador para recorrer los directorios
 	FILE *salida;				// apuntador al archivo que obtendra la salida del programa
 	colaDir *noProcesados;
 
 	arregloPipes **arreglo_pipes;
 	int fdInPadre[2];
-
-
 	
 	struct stat fileStat;       // para obtener la info de los archivos
 
@@ -182,11 +174,6 @@ int main(int argc, char const *argv[]){
 			n_procesos = 1;
 			aux = getcwd(NULL,0);
 			strcpy(nombre_entrada,aux);
-			// Si el directorio es vacio
-			if ((d = opendir(nombre_entrada)) == NULL){
-				perror("opendir: ");
-				exit(0);
-			}
 
 		}
 		// Si los comandos ejecutados son distintos a -h o salida
@@ -251,46 +238,16 @@ int main(int argc, char const *argv[]){
 
 	}
 
-	/*
-	// Este caso solo para el directorio actual (cuando no hay -d)
-	direct = opendir(".");
-	if (direct){
-		while ((archivo= readdir(direct))){
-			printf("%s\n",archivo->d_name);
-			
-			// Imprime el numero de bloques para los archivos encontrados en el directorio
-			// En el stat esta la info necesaria para los archivos
-			
-			if(stat(archivo->d_name,&fileStat) < 0)    // aqui asigno el stat 
-        		return 1;
-        	printf("Num bloques: %ld\n",fileStat.st_blocks);
-		}
-		closedir(direct);
-	}
-	*/
-
-	//   ******   OTRA MANERA   ******
 	
-	
-	//d = direct;
-    /* Open the directory specified by "dir_name". */
-
-    //d = opendir (".");
-
     /* Check it was opened. */
     if (! d) {
         fprintf (stderr, "Cannot open directory : %s\n",
                   strerror (errno));
         exit (EXIT_FAILURE);
     }
-    while (1) {
-
-			
-	}	
+    	
 
 	// ************************************************
-
-
 
 
 	/*Inicializacion de la informacion de los trabajadores -------------------*/
@@ -342,7 +299,7 @@ int main(int argc, char const *argv[]){
 
 
         //recorrer directorio
-        if ((d = opendir("src")) == NULL){
+        if ((d = opendir(nombre_entrada)) == NULL){
     		perror("opendir");
     		return -1;
     	}
@@ -399,7 +356,7 @@ int main(int argc, char const *argv[]){
 							trabLibres[i] = 0;
 
 							/*Escribir en su pipe MARIIIII*/
-							write(arreglo_pipes[i]->fd[1],dirTransicional,sizeof(dirTransicional));
+							write(arreglo_pipes[i]->fd[1],dirTransicional,strlen(dirTransicional));
 							//free(dirTransicional)
 							break;
 						}
@@ -447,8 +404,8 @@ int main(int argc, char const *argv[]){
     	}
     }
 
-    eliminarLista(noProcesados);
-    free(noProcesados);
+    // eliminarLista(noProcesados);
+    // free(noProcesados);
 
     //Eliminar los strings
     return 0;
