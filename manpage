@@ -41,11 +41,11 @@ COMPILE
                                             trabajador.c
                                             colaDirectorios.c
        Con este comando, trabajador.h genera las funciones para las
-       estructuras que necesitan los procesos trabajadores y los 
-       arreglos de estos
+       estructuras que  necesitan  los  procesos trabajadores y los 
+       arreglos de estos.
 
 RUN
-       Para correr el programa se debe ejecutar de acuerdo a la 
+       Para correr el programa se debe ejecutar de  acuerdo a la 
        sintaxis previamente explicada, donde el primer argumento
        es ./UsoDisco y luego el(los) flag(s) necesarios.
 
@@ -58,7 +58,11 @@ RUN
        ./UsoDisco -d dir -n i salida
 
        Los siguientes comandos son no validos:
-       ./usoDisco -h : el comando se llama UsoDisco
-       ./UsoDisco -n salida : falta el nivel de concurrencia
+       ./usoDisco -h          : el comando se llama UsoDisco
+       ./UsoDisco -n salida   : falta el nivel de concurrencia
        ./UsoDisco -d 4 salida : a menos que haya un directorio con nombre 4
-       ./usoDisco -h salida : -h no puede ser usado con las otras opciones
+       ./usoDisco -h salida   : -h no puede ser usado con las otras opciones
+
+AUTHORS
+       Marisela Del Valle
+       Javier Lopez
