@@ -12,6 +12,7 @@ typedef struct colaDir{
 void crearCola    (colaDir *aux);
 void agregarEnCola(colaDir *aux,char *in);
 void desencolar   (colaDir *aux);
+int empty(colaDir *aux);
 char *mostrarPrimero(colaDir *aux);
 char *pop(colaDir *aux);
 

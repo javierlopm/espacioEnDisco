@@ -36,12 +36,6 @@ void entrada_invalida(){
 }
 
 
-typedef struct arregloPipes
-{
-  int fd[2];
-} arregloPipes;
-
-
 /*Usar para los hijos
 dirTransicional    = (char *) malloc(sizeof(char) * 255);
 dirTransicional[0] = '\0';
@@ -55,7 +49,8 @@ dirTransicional = NULL; //Apuntador tomado por un proceso o cola
 
 void trabajar(
 	sindicato *arrTrab,
-	int *fdInPadre					//Pipe de salida para comunicar con el padre
+	int *fdInPadre,					//Pipe de salida para comunicar con el padre
+	int numProc
 )
 {	
 	/*Enteros*/
@@ -65,6 +60,7 @@ void trabajar(
 	int numLinks   = 0;			//Cantidad de soflinks encontrados
 	int numBloques = 0;			//Cantidad de bloques encontrados
 	int status;					//Status de salida de las escrituras a pipes
+	int indiceLibre;
 
 	/*Strings*/
 	char dirTransicional[255];  //String para la lectura del directorio a trab
@@ -78,13 +74,8 @@ void trabajar(
 
 	//Busqueda del pipe adecuado para el pid del trabajador actual
 	childpid = getpid();	
-    for (i=0;i<arrTrab->tam;i++){
-    	printf("Este es el pid que estoy verificando %d\n",getPidN(arrTrab,i));
-    	if (getPidN(arrTrab,i)==childpid){
-    		printf("Found it no joda pid %d, i=%d\n",childpid,i);
-    		fd_proc = getPipeN(arrTrab,i);
-    	}
-    }
+
+    fd_proc = getPipeN(arrTrab,numProc)
 
     close(fd_proc[WRITE]);  //Se cierra el extremo write para leer del padre
     close(fdInPadre[READ]); //Se cierra el extremo read para escribir al padre
@@ -93,6 +84,7 @@ void trabajar(
 		//Limpiar string y leer directorio a trabajar
 		dirTransicional[0] = '\0';
 		printf("FILE DESCRIPTOR: %d\n",fd_proc[READ]);
+
 		status = read(fd_proc[READ], dirTransicional, strlen(dirTransicional)+1);
 		if(status == -1){
 			perror("Error de lectura:");
@@ -108,10 +100,12 @@ void trabajar(
 
 		//Escribir al padre en formato fijo
 		status  = write(fdInPadre[WRITE],&childpid  , sizeof(int)); //Entero que realizo la llamada
-		status  = write(fdInPadre[WRITE],&numBloques, sizeof(int)); //Bloques
+		status += write(fdInPadre[WRITE],&numBloques, sizeof(int)); //Bloques
 		status += write(fdInPadre[WRITE],&numLinks  , sizeof(int)); //Links
 		status += write(fdInPadre[WRITE],salida     , sizeof(char)*strlen(salida)); //Strings recorridos
 		
+
+
 		//Libera la cola
 		eliminarCola(dirPorRecorrer);
 		free(dirPorRecorrer);
@@ -137,6 +131,8 @@ int main(int argc, char const *argv[]){
 	int info_archivo;           // guarda la info del archivo que da stat
 	int numLinks   = 0;         //cantidad de enlaces logicos
 	int fdInPadre[2];           // pipe de escritura de hijos al padre
+	int pidAux;
+	int childpid;
 	
 	/*Strings*/
 	char nombre_entrada[255];	// apuntador a la ruta que se obtiene por input
@@ -245,56 +241,38 @@ int main(int argc, char const *argv[]){
 
 	salida = fopen(argv[argc-1],"w");
 
-    if (! d) {
-        fprintf (stderr, "Cannot open directory : %s\n",
-                  strerror (errno));
-        exit (EXIT_FAILURE);
-    }
-
-	// ************************************************
-
-
 	/*Inicializacion de la informacion de los trabajadores -------------------*/
 
-
-	//Arreglo de pipes de comunicacion de padres a hijos 
-	
-	//arreglo_pipes = (arregloPipes**) malloc(sizeof(arregloPipes*) * n_procesos);
 	//Pipe de hijos al proceso master
+	pipe(fdInPadre);
+
 	arrTrab = (sindicato *) malloc(sizeof(sindicato));
 	crearSindicato(arrTrab,n_procesos);
 
-	pipe(fdInPadre);
-
-	//Inicializacion de arreglo booleano de trabajadores libres
-	//trabLibres 		= (int *) malloc(sizeof(int) * n_procesos);
-	//for (i = 0; i < n_procesos; i++) trabLibres[i] = 1;
-
-	//Init de pid de trabajadores
-	//pidTrabajadores = (int *) malloc(sizeof(int) * n_procesos);
 	
-
-	// Creamos tantos pipes y procesos como indique el nivel de concurrencia
 	for (i=0;i<n_procesos;i++){
-		//arreglo_pipes[i] = (arregloPipes*) malloc(sizeof(arregloPipes));
-		//pipe(arreglo_pipes[i]->fd);
         
-        if((trabajadores = fork()) == -1)
-        {
+        if((trabajadores = fork()) == -1){
             perror("fork error");
             exit(1);
         }
 
-        if(trabajadores == 0) break;
+        if(trabajadores == 0){
+        	//Almacenamos posicion en el arreglo del proc
+        	numProc = i;
+        	break;
+        }
         else{
-        	/*Almacenamiento del pid del ultimo hijo*/
+        	//Almacenamiento del pid del ultimo hijo
         	arrTrab->trabajadores[i]->pid = trabajadores;
-            /* Parent process closes up output side of pipe */
-            close(arrTrab->trabajadores[i]->fd[WRITE]);
+            //cerramos el extremo inutilizado
+            close(arrTrab->trabajadores[i]->fd[READ]);
         }
     }
 
-    if(trabajadores != 0){	//El padre recorre directorios
+    /* Trabajos a realizar por cada proceso  ---------------------------------*/
+
+    if(trabajadores != 0){	//El padre recorre directorios luego asigna trabajos
 
         //Reserva de espacio para la cola de procesos a trabajar
         noProcesados = (colaDir *) malloc(sizeof(colaDir));
@@ -303,56 +281,68 @@ int main(int argc, char const *argv[]){
         //Cerramos el pipe para realizar lectura
         close(fdInPadre[WRITE]);
         
-
-    	printf("Directory stream is now open\n");
-    
-    
-    	
-        //SE SUPONE QUE DEBERIA RECORRER EL DIRECTORIO
+        //Ciclo para recorrer el directorio del comando
         while((entry=readdir(d))!=NULL){
 	       
 	        d_name = entry->d_name;
 			if(lstat(entry->d_name,&fileStat) < 0) return 1;
-				
+			
+			//Seleccionamos trabajos para cada tipo de archivo
 			switch(tipoArchivo(fileStat)){
-				case ARCH:
+				case ARCH:   //Los archivos se imprimen al archivo de salida
 					fprintf(
 							salida,"%ld %s/%s\n",
 							fileStat.st_blocks,nombre_entrada,d_name
 							);
 					break;
-				case SOFT:
+				case SOFT:	//Los soft link aumentan el contador
 					numLinks += 1;
 					break;
-				case DIRECT:
+				case DIRECT: //Los directorios se encolan
 					if( 
 						(strcmp(entry->d_name,"." )!= 0) &&
 						(strcmp(entry->d_name,"..")!= 0)
 					  )agregarEnCola(noProcesados,dirTransicional);
 					break;
 			}
-
         }
-    		
     	
-
+    	//Clausura del directorio
         if (closedir(d) == -1){
     		perror("closedir");
     		return -1;
     	}
-    
-    	printf("\nDirectory stream is now closed\n");
     	
-    }
-    //Los hijos ejecutan la funcion ciclica esperar/trabajar/enviar senal
+    }else trabajar(arrTrab,fdInPadre,numProc); // Funcion para proc hijos
 
+    //Algoritmo para la asignacion de trabajos por parte del padre
+    while(!empty(noProcesados)){
+    	indiceLibre = estaLibre(arrTrab);
 
-    // Recorro el arreglo de pid para encontrar el pipe correspondiente y pasarlo como parametro al
-    // procedimiento trabajar, para poder cerrar/abrir el extremo correspondiente
-
-    else trabajar(arrTrab,fdInPadre); 
-
-    /*Luego de finalizar los trabajos, finalizamos a cada hijo*/
+    	//Si se encuentra un proceso libre...
+    	if(indiceLibre != -1){
+    		//Se cambia el estado del trabajador encontrado
+    		cambiarLibre(arrTrab,indiceLibre,0);
+    		//Inicio el trabajo
+    		aux = pop(colaDir);
+    		write(
+    			  getPipeN(arrTrab,indiceLibre)[WRITE], //Pipe a escribir
+    			  aux,								    //primer string de cola
+    			  strlen(aux) * sizeof(char)			//tam string
+    			  );
+    	}
+    	else{
+    		//Espero la lectura de algun hijo y leo
+    		read(fdInPadre[READ],&childpid,sizeof(int));
+    		//cambio su estado
+    		cambiarLibre(arrTrab,getIndicePid(arrTrab,childpid),1);
+    		
+    		//trabajo la entrada
+    		//read
+    	}
+    } 
+    
+    //El programa debe finalizar, se envia senal para matar a los hijos
     for (i = 0; i < n_procesos; i++){
     	status = kill(getPidN(arrTrab,i),SIGKILL);
     	if(status == -1){

@@ -22,7 +22,7 @@ void crearSindicato(
     }
 }
 
-// Funcion que indica si el proceso esta libre o no
+// funcion que entrega el indice de un proceso libre o -1 si falla
 int  estaLibre(
     sindicato *entrada // arreglo de procesos trabajadores
 ){
@@ -63,4 +63,21 @@ void abolirSindicato(sindicato *entrada // arreglo de procesos trabajadores
     }
 
     free(entrada);
+}
+
+void cambiarLibre(sindicato *entrada, int indice, int estado){
+    entrada->trabajadores[indice] = estado;
+}
+
+int  getIndicePid (sindicato *entrada,int pid){
+    int res,i;
+
+    for (i = 0; i < entrada->tam; ++i){
+        if(entrada->trabajadores[i]->pid == pid){
+            res = i;
+            return res;
+        }
+    }
+    
+    return -1;
 }
