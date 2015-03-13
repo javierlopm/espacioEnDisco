@@ -34,3 +34,31 @@ OPTIONS
               Directorio a analizar, por defecto se usará el 
               actual ".".
 
+COMPILE
+       Para compilar UsoDisco.c, se ejecuta el archivo Makefile con
+       el comando make.
+       Se compilan los siguientes archivos: UsoDisco.c
+                                            trabajador.c
+                                            colaDirectorios.c
+       Con este comando, trabajador.h genera las funciones para las
+       estructuras que necesitan los procesos trabajadores y los 
+       arreglos de estos
+
+RUN
+       Para correr el programa se debe ejecutar de acuerdo a la 
+       sintaxis previamente explicada, donde el primer argumento
+       es ./UsoDisco y luego el(los) flag(s) necesarios.
+
+       Los siguientes comandos son validos:
+       ./UsoDisco -h
+       ./UsoDisco salida
+       ./UsoDisco -n i salida
+       ./UsoDisco -d dir salida
+       ./UsoDisco -n i -d dir salida
+       ./UsoDisco -d dir -n i salida
+
+       Los siguientes comandos son no validos:
+       ./usoDisco -h : el comando se llama UsoDisco
+       ./UsoDisco -n salida : falta el nivel de concurrencia
+       ./UsoDisco -d 4 salida : a menos que haya un directorio con nombre 4
+       ./usoDisco -h salida : -h no puede ser usado con las otras opciones

@@ -47,7 +47,7 @@ agregarEnCola(noProcesados,dirTransicional);
 dirTransicional = NULL; //Apuntador tomado por un proceso o cola
 */
 
-void trabajar(
+int trabajar(
 	sindicato *arrTrab,
 	int *fdInPadre,					//Pipe de salida para comunicar con el padre
 	int numProc
@@ -67,22 +67,25 @@ void trabajar(
 	char *salida;				//String dinamico para comunicar al padre
 	char *arcActual;			//Nombre del string 
 	char *aux;					//String auxiliar para concatenacion dinamica
-	
+	char * d_name;
+	char *path_adicional;
 	/*Estructura auxiliar*/
 	colaDir *dirPorRecorrer;	//Cola de directorios
-
+	struct dirent *entry;
+	DIR           *d;	
+	struct stat fileStat; 
 
 	//Busqueda del pipe adecuado para el pid del trabajador actual
 	childpid = getpid();	
 
-    fd_proc = getPipeN(arrTrab,numProc)
+    fd_proc = getPipeN(arrTrab,numProc);
 
     close(fd_proc[WRITE]);  //Se cierra el extremo write para leer del padre
     close(fdInPadre[READ]); //Se cierra el extremo read para escribir al padre
 
 	while(1){
 		//Limpiar string y leer directorio a trabajar
-		dirTransicional[0] = '\0';
+		
 		printf("FILE DESCRIPTOR: %d\n",fd_proc[READ]);
 
 		status = read(fd_proc[READ], dirTransicional, strlen(dirTransicional)+1);
@@ -94,9 +97,42 @@ void trabajar(
 		/*Inicializacion de la cola de directorios pendientes*/
 		dirPorRecorrer = (colaDir *) malloc (sizeof(colaDir));
 		crearCola(dirPorRecorrer);
-		
+		agregarEnCola(dirPorRecorrer,dirTransicional);		
 		//trabajar directorio
-		while(1){printf("Hay algo por recorrer\n");}
+		while(!empty(dirPorRecorrer)){
+			path_adicional = pop(dirPorRecorrer);
+			if ((d = opendir(path_adicional)) == NULL){
+				perror("opendir: ");
+				exit(0);
+			}
+			while((entry=readdir(d))!=NULL){
+		       
+		       	if(lstat(entry->d_name,&fileStat) < 0) return 1;
+		        d_name = entry->d_name;
+				if(lstat(entry->d_name,&fileStat) < 0) return 1;
+				
+				//Seleccionamos trabajos para cada tipo de archivo
+				switch(tipoArchivo(fileStat)){
+					case ARCH:   //Los archivos se imprimen al archivo de salida
+						//concatenar a la ruta
+						// obtener bloque del archivo
+						break;
+					case SOFT:	//Los soft link aumentan el contador
+						numLinks += 1;
+						
+						break;
+					case DIRECT: //Los directorios se encolan
+						if( 
+							(strcmp(entry->d_name,"." )!= 0) &&
+							(strcmp(entry->d_name,"..")!= 0)
+						  )agregarEnCola(dirPorRecorrer,dirTransicional);
+
+						break;
+				}
+	        }
+	    }
+
+
 
 		//Escribir al padre en formato fijo
 		status  = write(fdInPadre[WRITE],&childpid  , sizeof(int)); //Entero que realizo la llamada
@@ -113,6 +149,7 @@ void trabajar(
 	}
 
 	exit(0);
+	return (0);
 }
 
 //Crear manejador de senal para cuando un proceso termine y cambie su estado a libre
@@ -133,7 +170,9 @@ int main(int argc, char const *argv[]){
 	int fdInPadre[2];           // pipe de escritura de hijos al padre
 	int pidAux;
 	int childpid;
-	
+	int numProc;
+	int indiceLibre;
+
 	/*Strings*/
 	char nombre_entrada[255];	// apuntador a la ruta que se obtiene por input
 	char arch_salida[255];   	// nombre del archivo de salida
@@ -324,7 +363,7 @@ int main(int argc, char const *argv[]){
     		//Se cambia el estado del trabajador encontrado
     		cambiarLibre(arrTrab,indiceLibre,0);
     		//Inicio el trabajo
-    		aux = pop(colaDir);
+    		aux = pop(noProcesados);
     		write(
     			  getPipeN(arrTrab,indiceLibre)[WRITE], //Pipe a escribir
     			  aux,								    //primer string de cola

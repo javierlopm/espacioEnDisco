@@ -66,7 +66,7 @@ void abolirSindicato(sindicato *entrada // arreglo de procesos trabajadores
 }
 
 void cambiarLibre(sindicato *entrada, int indice, int estado){
-    entrada->trabajadores[indice] = estado;
+    entrada->trabajadores[indice]->libre = estado;
 }
 
 int  getIndicePid (sindicato *entrada,int pid){
