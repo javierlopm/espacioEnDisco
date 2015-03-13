@@ -401,7 +401,6 @@ int main(int argc, char const *argv[]){
     		//Inicio el trabajo
     		aux = pop(noProcesados);
 
-    		printf("Soy el main y paso a mi hijo %s\n",aux);
 
     		write(
     			  getPipeN(arrTrab,indiceLibre)[WRITE], //Pipe a escribir
