@@ -2,17 +2,20 @@
 #include <stdlib.h>
 #include "colaDirectorios.h"
 
+// Asignacion de valores iniciales
 void crearCola(colaDir *aux){
     aux->tam = 0;
     aux->primero = NULL;
     aux->ultimo  = NULL;
 }
 
+// Caja de contenido, auxiliar para la cola
 void crearCaja(caja *aux,char *in){
     aux->contenido = in;
     aux->siguiente = NULL;
 }
 
+// Agregar un string a la cola
 void agregarEnCola(colaDir *aux,char *in){
     caja *cajaAuxiliar;
 
@@ -33,6 +36,7 @@ void agregarEnCola(colaDir *aux,char *in){
     aux->tam = aux->tam + 1;
 }
 
+// Eliminar primer elemento
 void desencolar(colaDir *aux){
     caja *segundo;
     if(aux->primero != NULL){
@@ -50,6 +54,7 @@ void desencolar(colaDir *aux){
     }
 }
 
+// Muestra el tope
 char *mostrarPrimero(colaDir *aux){
     if(aux->primero != NULL){
         return aux->primero->contenido;
@@ -59,6 +64,7 @@ char *mostrarPrimero(colaDir *aux){
     }
 }
 
+// extrar tope y desencolar
 char *pop(colaDir *aux){
     char *salida;
 
@@ -68,10 +74,12 @@ char *pop(colaDir *aux){
     return salida;
 }
 
+//Indica si la cola esta vacia
 int empty(colaDir *aux){
     return (aux->tam == 0);
 }
 
+//Liberar memoria ocupada por cola
 void eliminarCola(colaDir *aux){
     caja *iterador,*anterior;
 

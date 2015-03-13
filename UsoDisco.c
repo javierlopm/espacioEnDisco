@@ -36,17 +36,6 @@ void entrada_invalida(){
 }
 
 
-/*Usar para los hijos
-dirTransicional    = (char *) malloc(sizeof(char) * 255);
-dirTransicional[0] = '\0';
-strcpy(dirTransicional,nombre_entrada); //Revisar si termina en /
-strcat(dirTransicional,"/"			 );
-strcat(dirTransicional,entry->d_name );
-
-agregarEnCola(noProcesados,dirTransicional);
-dirTransicional = NULL; //Apuntador tomado por un proceso o cola
-*/
-
 int trabajar(
 	sindicato *arrTrab,
 	int *fdInPadre,					//Pipe de salida para comunicar con el padre
@@ -66,7 +55,7 @@ int trabajar(
 	char dirTransicional[255];  //String para la lectura del directorio a trab
 	char *salida;				//String dinamico para comunicar al padre
 	char *arcActual;			//Nombre del string 
-	char *aux;					//String auxiliar para concatenacion dinamica
+	char *aux,*auxconcat;	    //String auxiliar para concatenacion dinamica
 	char * d_name;
 	char *path_adicional;
 	/*Estructura auxiliar*/
@@ -85,10 +74,11 @@ int trabajar(
 
 	while(1){
 		//Limpiar string y leer directorio a trabajar
-		
-		printf("FILE DESCRIPTOR: %d\n",fd_proc[READ]);
 
-		status = read(fd_proc[READ], dirTransicional, strlen(dirTransicional)+1);
+
+		memset(dirTransicional,'\0',254); //Aseguramos que el string no tenga basura
+
+		status = read(fd_proc[READ], dirTransicional, 255);
 		if(status == -1){
 			perror("Error de lectura:");
 			exit(1);
@@ -97,25 +87,52 @@ int trabajar(
 		/*Inicializacion de la cola de directorios pendientes*/
 		dirPorRecorrer = (colaDir *) malloc (sizeof(colaDir));
 		crearCola(dirPorRecorrer);
-		agregarEnCola(dirPorRecorrer,dirTransicional);		
+		agregarEnCola(dirPorRecorrer,dirTransicional);
+
+		salida = (char*) malloc(sizeof(char) * 3);
+		salida[0] = '\0';
+
 		//trabajar directorio
 		while(!empty(dirPorRecorrer)){
+
 			path_adicional = pop(dirPorRecorrer);
+			
+
 			if ((d = opendir(path_adicional)) == NULL){
 				perror("opendir: ");
+				printf("En directorio %s en %d \n",path_adicional,1);
 				exit(0);
 			}
-			while((entry=readdir(d))!=NULL){
+
+
+			while((entry=readdir(d))!=NULL ){
 		       
-		       	if(lstat(entry->d_name,&fileStat) < 0) return 1;
+		       	if(lstat(entry->d_name,&fileStat) < 0) {
+		       		perror("lstat1: ");
+		       		exit(1);
+       			}
 		        d_name = entry->d_name;
-				if(lstat(entry->d_name,&fileStat) < 0) return 1;
-				
+
 				//Seleccionamos trabajos para cada tipo de archivo
 				switch(tipoArchivo(fileStat)){
 					case ARCH:   //Los archivos se imprimen al archivo de salida
 						//concatenar a la ruta
-						// obtener bloque del archivo
+						aux = (char*) malloc(sizeof(char) + strlen(dirTransicional) + strlen(path_adicional) + 20);
+						sprintf(aux,"%d",(int) fileStat.st_blocks);
+						strcat(aux," ");
+						strcat(aux,dirTransicional);
+						strcat(aux,"/");
+						strcat(aux,path_adicional);
+						strcat(aux,"\n");
+
+						auxconcat = (char *) malloc(strlen(aux) + strlen(salida) + 1);
+						strcpy(auxconcat,salida);
+						strcpy(auxconcat,aux);
+
+						free(salida);
+						free(aux);
+						salida = auxconcat;
+						
 						break;
 					case SOFT:	//Los soft link aumentan el contador
 						numLinks += 1;
@@ -125,8 +142,17 @@ int trabajar(
 						if( 
 							(strcmp(entry->d_name,"." )!= 0) &&
 							(strcmp(entry->d_name,"..")!= 0)
-						  )agregarEnCola(dirPorRecorrer,dirTransicional);
+						  ){
+							aux = (char*) malloc(sizeof(char) + strlen(dirTransicional) + strlen(path_adicional) + 20);
+							strcat(aux,dirTransicional);
+							strcat(aux,"/");
+							strcat(aux,path_adicional);
+							strcat(aux,"/");
 
+							agregarEnCola(dirPorRecorrer,aux);
+
+							}
+						  
 						break;
 				}
 	        }
@@ -136,12 +162,9 @@ int trabajar(
 
 		//Escribir al padre en formato fijo
 		status  = write(fdInPadre[WRITE],&childpid  , sizeof(int)); //Entero que realizo la llamada
-		status += write(fdInPadre[WRITE],&numBloques, sizeof(int)); //Bloques
 		status += write(fdInPadre[WRITE],&numLinks  , sizeof(int)); //Links
-		status += write(fdInPadre[WRITE],salida     , sizeof(char)*strlen(salida)); //Strings recorridos
+		status += write(fdInPadre[WRITE],salida     , strlen(salida)); //Strings recorridos
 		
-
-
 		//Libera la cola
 		eliminarCola(dirPorRecorrer);
 		free(dirPorRecorrer);
@@ -152,33 +175,33 @@ int trabajar(
 	return (0);
 }
 
-//Crear manejador de senal para cuando un proceso termine y cambie su estado a libre
-//void handler
 
 
 int main(int argc, char const *argv[]){
 	
 	/*Enteros*/
-	int n_procesos;    			//numero de procesos que realizaran el trabajo
-	int i;						//Variable auxiliar de iterador
-	int *trabLibres;			//Arreglo booleano de 
-	int *pidTrabajadores;		//Arreglo con pid de trabajadores
-	int status;					//Variable auxiliar para status de procesos
+	int n_procesos;    			// numero de procesos que realizaran el trabajo
+	int i;						// Variable auxiliar de iterador
+	int *trabLibres;			// Arreglo booleano de 
+	int *pidTrabajadores;		// Arreglo con pid de trabajadores
+	int status;					// Variable auxiliar para status de procesos
 	pid_t   trabajadores;		// id de los procesos trabajadores		
 	int info_archivo;           // guarda la info del archivo que da stat
-	int numLinks   = 0;         //cantidad de enlaces logicos
+	int numLinks   = 0;         // cantidad de enlaces logicos
 	int fdInPadre[2];           // pipe de escritura de hijos al padre
-	int pidAux;
-	int childpid;
-	int numProc;
-	int indiceLibre;
+	int pidAux;				    // enteros auxiliare para pids
+	int childpid;				
+	int numProc;				// argumento indice para cada trabajador
+	int indiceLibre;		    // Almacena el indice del 1er trabajador libre
+	int auxLinks;				// Almacenar los valores obtenidos de los trab.
 
 	/*Strings*/
 	char nombre_entrada[255];	// apuntador a la ruta que se obtiene por input
 	char arch_salida[255];   	// nombre del archivo de salida
 	char *dirTransicional;      // directorio auxiliar para las colas
-	char *aux;
-	char * d_name;
+	char *aux;					// Auxiliar de transferencia
+	char * d_name;				// Nombre de archivo/dir encontrado
+	char * byteRead;			// string aux para lectura de un byte en pipe
 
 	/*Estructuras*/
 	struct dirent *archivo;		 // estructuras para el manejo de archivos
@@ -187,7 +210,7 @@ int main(int argc, char const *argv[]){
 	FILE 		  *salida;		 // salida del programa
 	colaDir 	  *noProcesados; // cola de directorios a procesar por hijos
 	sindicato     *arrTrab;	     // estructura para informacion de trabajadore
-	struct stat fileStat;       // para obtener la info de los archivos
+	struct stat fileStat;        // para obtener la info de los archivos
 
 	n_procesos = 1;				// si no se ingresa el numero de procesos, por defecto es 1 
 
@@ -228,6 +251,7 @@ int main(int argc, char const *argv[]){
 			// Si el directorio es vacio error
 			if ((d = opendir(nombre_entrada)) == NULL){
 				perror("opendir: ");
+				printf("En directorio %s en %d \n",nombre_entrada,2);
 				exit(0);
 			}
 		}
@@ -250,6 +274,7 @@ int main(int argc, char const *argv[]){
 
 		if ((d = opendir(nombre_entrada)) == NULL){
 			perror("opendir: ");
+			printf("En directorio %s en %d \n",nombre_entrada,3);
 			exit(0);
 		}
 	}
@@ -271,12 +296,16 @@ int main(int argc, char const *argv[]){
 
 		//Extraccion de la salida, comun a ambos formatos
 
+
+
 		if ((d = opendir(nombre_entrada)) == NULL){
 			// Si el directorio es vacio
 			perror("opendir: ");
+			printf("En directorio %s en %d \n",nombre_entrada,4);
 			exit(0);
 		}
 	}
+
 
 	salida = fopen(argv[argc-1],"w");
 
@@ -338,10 +367,11 @@ int main(int argc, char const *argv[]){
 					numLinks += 1;
 					break;
 				case DIRECT: //Los directorios se encolan
+					
 					if( 
 						(strcmp(entry->d_name,"." )!= 0) &&
 						(strcmp(entry->d_name,"..")!= 0)
-					  )agregarEnCola(noProcesados,dirTransicional);
+					  )agregarEnCola(noProcesados,d_name);
 					break;
 			}
         }
@@ -355,6 +385,11 @@ int main(int argc, char const *argv[]){
     }else trabajar(arrTrab,fdInPadre,numProc); // Funcion para proc hijos
 
     //Algoritmo para la asignacion de trabajos por parte del padre
+
+    byteRead = (char *) malloc(sizeof(char) * 3);
+
+
+
     while(!empty(noProcesados)){
     	indiceLibre = estaLibre(arrTrab);
 
@@ -362,8 +397,12 @@ int main(int argc, char const *argv[]){
     	if(indiceLibre != -1){
     		//Se cambia el estado del trabajador encontrado
     		cambiarLibre(arrTrab,indiceLibre,0);
+
     		//Inicio el trabajo
     		aux = pop(noProcesados);
+
+    		printf("Soy el main y paso a mi hijo %s\n",aux);
+
     		write(
     			  getPipeN(arrTrab,indiceLibre)[WRITE], //Pipe a escribir
     			  aux,								    //primer string de cola
@@ -371,15 +410,29 @@ int main(int argc, char const *argv[]){
     			  );
     	}
     	else{
-    		//Espero la lectura de algun hijo y leo
-    		read(fdInPadre[READ],&childpid,sizeof(int));
-    		//cambio su estado
-    		cambiarLibre(arrTrab,getIndicePid(arrTrab,childpid),1);
-    		
-    		//trabajo la entrada
-    		//read
+    		//Espero la escritura de algun hijo y leo
+
+    		//Modificamos el estado del trabajador que termino
+			read(fdInPadre[READ],&childpid  , sizeof(int)); 
+			cambiarLibre(arrTrab,getIndicePid(arrTrab,childpid),1);
+
+			//Tomamos los links que encontro
+			read(fdInPadre[READ],&auxLinks  , sizeof(int)); 
+			numLinks += auxLinks;
+
+			strcpy(byteRead,"m"); //Caracter de control
+			while( strcmp(byteRead,"\0") ){
+				read(fdInPadre[READ],byteRead,1);
+
+				if( strcmp(byteRead,"\0") ){
+					fprintf(salida,"%c",byteRead[0]);
+				}
+
+			} //Strings recorridos
     	}
-    } 
+    }
+
+    fprintf(salida,"Total de enlaces logicos: %d",numLinks);
     
     //El programa debe finalizar, se envia senal para matar a los hijos
     for (i = 0; i < n_procesos; i++){
@@ -395,7 +448,5 @@ int main(int argc, char const *argv[]){
     free(noProcesados);
 
     fclose(salida);
-
-    //Eliminar los strings
     return 0;
 }
